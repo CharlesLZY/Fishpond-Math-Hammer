@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import 'katex/dist/katex.min.css'
+import { calculateChargeProbabilities } from '../lib/dice'
 import { Page, Tabs } from './ui'
 import '../styles/cheatsheet.css'
 
 const CHEATSHEET_TABS = [
   { value: 'd6', label: 'D6' },
-  { value: 'd2d6', label: '2D6' }
+  { value: 'd2d6', label: '2D6' },
+  { value: 'd3d6', label: '3D6' }
 ]
 
 // Cumulative-or-better D6 probabilities for the D6 cheatsheet table.
@@ -28,29 +30,6 @@ const calculateD6Probabilities = () => {
   return outcomes
 }
 
-// 2D6 sum-or-better probabilities.
-const calculate2D6Probabilities = () => {
-  const outcomes = []
-  for (let target = 2; target <= 12; target++) {
-    let count = 0
-    for (let d1 = 1; d1 <= 6; d1++) {
-      for (let d2 = 1; d2 <= 6; d2++) {
-        if (d1 + d2 >= target) count++
-      }
-    }
-    const probability = count / 36
-    const probabilityWithReroll = 2 * probability - probability * probability
-
-    outcomes.push({
-      target,
-      ways: count,
-      probability: (probability * 100).toFixed(2),
-      probabilityWithReroll: (probabilityWithReroll * 100).toFixed(2)
-    })
-  }
-  return outcomes
-}
-
 const probabilityClass = (p) =>
   p >= 80 ? 'healthy' : p >= 50 ? 'medium' : p >= 33 ? 'risky' : p >= 10 ? 'extremely-risky' : 'suicide'
 
@@ -58,7 +37,7 @@ function Cheatsheet() {
   const [activeTab, setActiveTab] = useState('d6')
 
   const d6Probabilities = calculateD6Probabilities()
-  const d2d6Probabilities = calculate2D6Probabilities()
+  const chargeProbabilities = calculateChargeProbabilities()
 
   return (
     <Page title="Cheatsheet">
@@ -105,15 +84,52 @@ function Cheatsheet() {
                 </tr>
               </thead>
               <tbody>
-                {d2d6Probabilities.map((row) => {
+                {chargeProbabilities.map((row) => {
                   const prob = parseFloat(row.probability)
                   const probReroll = parseFloat(row.probabilityWithReroll)
                   return (
                     <tr key={row.target}>
                       <td className="result">{row.target}</td>
-                      <td className={`probability ${probabilityClass(prob)}`}>{row.probability}%</td>
+                      <td className={`probability ${probabilityClass(prob)}`}>
+                        {row.probability}%
+                      </td>
                       <td className={`probability-reroll ${probabilityClass(probReroll)}`}>
                         {row.probabilityWithReroll}%
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {activeTab === 'd3d6' && (
+          <div className="tab-content">
+            <table className="probability-table">
+              <thead>
+                <tr>
+                  <th className="col-result">Result</th>
+                  <th className="col-probability">Chance</th>
+                  <th className="col-probability-reroll">With Reroll</th>
+                  <th className="col-probability">Drop Lowest</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chargeProbabilities.map((row) => {
+                  const prob = parseFloat(row.probability3D6)
+                  const probReroll = parseFloat(row.probability3D6WithReroll)
+                  const probDropLowest = parseFloat(row.probability3D6HighestTwo)
+                  return (
+                    <tr key={row.target}>
+                      <td className="result">{row.target}</td>
+                      <td className={`probability ${probabilityClass(prob)}`}>
+                        {row.probability3D6}%
+                      </td>
+                      <td className={`probability-reroll ${probabilityClass(probReroll)}`}>
+                        {row.probability3D6WithReroll}%
+                      </td>
+                      <td className={`probability ${probabilityClass(probDropLowest)}`}>
+                        {row.probability3D6HighestTwo}%
                       </td>
                     </tr>
                   )
