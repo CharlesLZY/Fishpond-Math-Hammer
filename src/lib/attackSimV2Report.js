@@ -78,6 +78,7 @@ const describeUnitBuffs = (unitBuffs, t) => {
   const parts = []
   if (unitBuffs.plusOneAttack) parts.push(t('plusOneAttack'))
   if (unitBuffs.plusOneDamage) parts.push(t('plusOneDamage'))
+  if (unitBuffs.plusOneAp) parts.push(t('plusOneAp'))
   if (unitBuffs.plusOneHit) parts.push(t('plusOneHit'))
   if (unitBuffs.plusOneWound) parts.push(t('plusOneWound'))
   if (

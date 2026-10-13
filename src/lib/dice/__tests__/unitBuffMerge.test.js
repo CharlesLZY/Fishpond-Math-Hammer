@@ -52,6 +52,7 @@ describe('isUnitBuffsEmpty', () => {
   it('any enabled buff is non-empty', () => {
     expect(isUnitBuffsEmpty(makeUnitBuffs({ plusOneAttack: true }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ plusOneDamage: true }))).toBe(false)
+    expect(isUnitBuffsEmpty(makeUnitBuffs({ plusOneAp: true }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ lethalHits: true }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ hitReroll: 'reroll-one' }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ sustainedHits: '1' }))).toBe(false)
@@ -78,6 +79,13 @@ describe('mergeWeaponWithUnit', () => {
     expect(mergeWeaponWithUnit(weapon({ damage: '2' }), unit).damage).toBe('3')
     expect(mergeWeaponWithUnit(weapon({ damage: 'D3+1' }), unit).damage).toBe('D3+2')
     expect(mergeWeaponWithUnit(weapon({ damage: '2D6-1' }), unit).damage).toBe('2D6')
+  })
+
+  it('adds one to the AP characteristic', () => {
+    const unit = makeUnitBuffs({ plusOneAp: true })
+
+    expect(mergeWeaponWithUnit(weapon({ ap: 0 }), unit).ap).toBe(1)
+    expect(mergeWeaponWithUnit(weapon({ ap: 2 }), unit).ap).toBe(3)
   })
 
   it('OR-merges boolean buffs', () => {
@@ -209,6 +217,12 @@ describe('describeUpgrades', () => {
     )
     expect(up.lethalHits).toBe(true)
     expect(up.plusOneHit).toBe(true)
+  })
+
+  it('flags AP upgraded by the unit buff', () => {
+    const up = describeUpgrades(weapon({ ap: 1 }), makeUnitBuffs({ plusOneAp: true }))
+
+    expect(up.plusOneAp).toBe(true)
   })
 
   it('does not flag a boolean buff the weapon already has', () => {

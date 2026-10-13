@@ -49,6 +49,12 @@ function UnitBuffsPanel({ value, onChange }) {
       onToggle: () => update({ plusOneDamage: !value.plusOneDamage }),
     },
     {
+      key: 'plusOneAp',
+      label: t('plusOneAp'),
+      active: value.plusOneAp,
+      onToggle: () => update({ plusOneAp: !value.plusOneAp }),
+    },
+    {
       key: 'plusOneHit',
       label: t('plusOneHit'),
       active: value.plusOneHit,

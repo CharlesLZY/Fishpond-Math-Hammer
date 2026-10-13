@@ -56,6 +56,7 @@ export const makeUnitBuffs = (overrides = {}) => ({
   woundReroll: 'no-reroll',
   plusOneAttack: false,
   plusOneDamage: false,
+  plusOneAp: false,
   plusOneHit: false,
   plusOneWound: false,
   sustainedHits: 'off',
@@ -74,6 +75,7 @@ export const isUnitBuffsEmpty = (u) => {
     (u.woundReroll || 'no-reroll') === 'no-reroll' &&
     !u.plusOneAttack &&
     !u.plusOneDamage &&
+    !u.plusOneAp &&
     !u.plusOneHit &&
     !u.plusOneWound &&
     (!u.sustainedHits || u.sustainedHits === 'off') &&
@@ -131,6 +133,10 @@ export const mergeWeaponWithUnit = (weapon, unit) => {
     merged.damage = addOneToDiceExpression(weapon.damage)
     merged.plusOneDamage = true
   }
+  if (unit.plusOneAp) {
+    merged.ap = (Number(weapon.ap) || 0) + 1
+    merged.plusOneAp = true
+  }
   if (unit.plusOneHit) merged.plusOneHit = true
   if (unit.plusOneWound) merged.plusOneWound = true
 
@@ -166,6 +172,7 @@ export const describeUpgrades = (weapon, unit) => {
   if (merged.woundReroll !== weapon.woundReroll) out.woundReroll = true
   if (unit.plusOneAttack) out.plusOneAttack = true
   if (unit.plusOneDamage) out.plusOneDamage = true
+  if (unit.plusOneAp) out.plusOneAp = true
   if (unit.plusOneHit && !weapon.plusOneHit) out.plusOneHit = true
   if (unit.plusOneWound && !weapon.plusOneWound) out.plusOneWound = true
   if (merged.sustainedHits !== (weapon.sustainedHits || 'off')) out.sustainedHits = true
