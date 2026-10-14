@@ -11,8 +11,6 @@
   gap: 24px;
 }
 
-/* ---- page title + edition badge ---- */
-
 .attack-sim-title {
   display: inline-flex;
   align-items: center;
@@ -34,26 +32,10 @@
   letter-spacing: 0.04em;
 }
 
-/* ---- toolbar (scenarios / data) ----
- * The .toolbar-group / .toolbar-button / .toolbar-select / .profile-set-controls
- * primitives live in uiShared.css so the Macro Battleplan sidebar can reuse
- * the same visual language. Only Attack Simulator-specific layout lives here. */
-
-.attack-sim-toolbar {
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-/* ---- language toggle ---- */
-
 .lang-toggle-group {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  margin-left: auto;
 }
 
 .lang-toggle-btn {
@@ -438,10 +420,6 @@
 /* ---- responsive ---- */
 
 @media (max-width: 768px) {
-  .attack-sim-toolbar {
-    gap: 8px;
-  }
-
   .attack-sim-section-header h2 {
     font-size: 14px;
   }

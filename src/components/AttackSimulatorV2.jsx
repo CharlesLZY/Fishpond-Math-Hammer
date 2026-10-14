@@ -2,8 +2,8 @@
 // Weapon cards show compact summaries and open dialogs for full buff editing.
 // Unit buffs are merged into each profile using best-wins, no-stacking rules.
 
-import { useEffect, useRef, useState } from 'react'
-import { Download, Upload, Save, Trash2, Link2, ClipboardCopy } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ClipboardCopy } from 'lucide-react'
 import {
   simulateAttack,
   isValidDiceExpression,
@@ -16,28 +16,28 @@ import {
   describeTargetUpgrades,
 } from '../lib/dice'
 import {
-  loadScenario,
-  saveScenario,
-  listSavedScenarios,
-  saveNamedScenario,
-  loadNamedScenario,
-  deleteNamedScenario,
   listSavedWeaponSets,
   saveNamedWeaponSet,
   loadNamedWeaponSet,
   deleteNamedWeaponSet,
+  getSavedWeaponSetLibrary,
+  mergeSavedWeaponSetLibrary,
   listSavedTargetSets,
   saveNamedTargetSet,
   loadNamedTargetSet,
   deleteNamedTargetSet,
+  getSavedTargetSetLibrary,
+  mergeSavedTargetSetLibrary,
   StorageQuotaError,
 } from '../lib/attackSimV2Storage'
 import {
-  encodeScenarioCode,
-  decodeScenarioCode,
-  buildShareUrl,
-  SHARE_QUERY_PARAM,
-} from '../lib/attackSimV2Share'
+  buildAttackerProfileLibraryExport,
+  buildDefenderProfileLibraryExport,
+  parseAttackerProfileLibrary,
+  parseDefenderProfileLibrary,
+  validateTargetShape,
+  validateWeaponShape,
+} from '../lib/attackSimV2ProfileLibrary'
 import { buildAttackSimV2Report } from '../lib/attackSimV2Report'
 import { Page, StatCard, StatGrid, DistributionChart } from './ui'
 import TargetProfileCardV2 from './attackSimV2/TargetProfileCardV2'
@@ -132,124 +132,44 @@ const stripId = (entry = {}) => omitId(entry)
 const rehydrateUnitBuffs = (entry) => makeUnitBuffs(entry || {})
 const rehydrateTargetUnitBuffs = (entry) => makeTargetUnitBuffs(entry || {})
 
-// ---- shape validators ------------------------------------------------------
-
-const isPosInt = (v) => Number.isInteger(v) && v > 0
-const isNonNegInt = (v) => Number.isInteger(v) && v >= 0
-const isThreshold = (v) => Number.isInteger(v) && v >= 2 && v <= 6
-
-const validateWeaponShape = (w) => {
-  if (!w || typeof w !== 'object') return 'not an object'
-  if (!isValidDiceExpression(w.attacks)) return `invalid attacks ${JSON.stringify(w.attacks)}`
-  if (!isValidDiceExpression(w.damage)) return `invalid damage ${JSON.stringify(w.damage)}`
-  if (!isPosInt(w.strength)) return `invalid strength ${w.strength}`
-  if (!isThreshold(w.toHit)) return `invalid toHit ${w.toHit}`
-  if (!isNonNegInt(w.ap)) return `invalid ap ${w.ap}`
-  if (w.modelsFiring != null && !isPosInt(w.modelsFiring))
-    return `invalid modelsFiring ${w.modelsFiring}`
-  return null
-}
-
-const validateTargetShape = (t) => {
-  if (!t || typeof t !== 'object') return 'not an object'
-  if (!isPosInt(t.models)) return `invalid models ${t.models}`
-  if (!isPosInt(t.toughness)) return `invalid toughness ${t.toughness}`
-  if (!isPosInt(t.wounds)) return `invalid wounds ${t.wounds}`
-  if (!isThreshold(t.save)) return `invalid save ${t.save}`
-  if (t.invulnSave != null && t.invulnSave !== 0 && !isThreshold(t.invulnSave))
-    return `invalid invulnSave ${t.invulnSave}`
-  if (t.fnp != null && t.fnp !== 0 && !isThreshold(t.fnp))
-    return `invalid fnp ${t.fnp}`
-  if (t.fnpMortal != null && t.fnpMortal !== 0 && !isThreshold(t.fnpMortal))
-    return `invalid fnpMortal ${t.fnpMortal}`
-  return null
-}
-
-const detectMobile = () => {
-  if (typeof navigator === 'undefined') return false
-  if (navigator.userAgentData?.mobile) return true
-  return /Android|iPhone|iPad|iPod|IEMobile|BlackBerry|Opera Mini/i.test(
-    navigator.userAgent || ''
-  )
+const downloadJson = (payload, filenamePrefix) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: 'application/json',
+  })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  anchor.href = url
+  anchor.download = `${filenamePrefix}-${stamp}.json`
+  document.body.appendChild(anchor)
+  try {
+    anchor.click()
+  } finally {
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
 }
 
 function AttackSimulatorV2() {
-  const [weapons, setWeapons] = useState(() => {
-    const saved = loadScenario()
-    if (saved?.weapons?.length) return saved.weapons.map(rehydrateWeapon)
-    return [makeWeapon({ name: 'Weapon 1' })]
-  })
-  const [targets, setTargets] = useState(() => {
-    const saved = loadScenario()
-    if (saved?.targets?.length) return saved.targets.map(rehydrateTarget)
-    return [makeTarget({ name: 'Profile 1' })]
-  })
-  const [unitBuffs, setUnitBuffs] = useState(() => {
-    const saved = loadScenario()
-    return rehydrateUnitBuffs(saved?.unitBuffs)
-  })
-  const [defenderUnitBuffs, setDefenderUnitBuffs] = useState(() => {
-    const saved = loadScenario()
-    return rehydrateTargetUnitBuffs(saved?.defenderUnitBuffs)
-  })
-  const [highPrecision, setHighPrecision] = useState(() => {
-    const saved = loadScenario()
-    return !!saved?.highPrecision
-  })
+  const [weapons, setWeapons] = useState(() => [
+    makeWeapon({ name: 'Weapon 1' }),
+  ])
+  const [targets, setTargets] = useState(() => [
+    makeTarget({ name: 'Profile 1' }),
+  ])
+  const [unitBuffs, setUnitBuffs] = useState(() => rehydrateUnitBuffs())
+  const [defenderUnitBuffs, setDefenderUnitBuffs] = useState(() =>
+    rehydrateTargetUnitBuffs()
+  )
+  const [highPrecision, setHighPrecision] = useState(false)
   const [result, setResult] = useState(null)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
-  const [savedNames, setSavedNames] = useState(() => listSavedScenarios())
-  const [selectedSlot, setSelectedSlot] = useState('')
   const [savedWeaponSets, setSavedWeaponSets] = useState(() => listSavedWeaponSets())
   const [selectedWeaponSet, setSelectedWeaponSet] = useState('')
   const [savedTargetSets, setSavedTargetSets] = useState(() => listSavedTargetSets())
   const [selectedTargetSet, setSelectedTargetSet] = useState('')
-  const [isMobile] = useState(detectMobile)
-  const fileInputRef = useRef(null)
-
-  // ---- share-link auto-load ----
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get(SHARE_QUERY_PARAM)
-    if (!code) return
-    const stripParam = () => {
-      params.delete(SHARE_QUERY_PARAM)
-      const qs = params.toString()
-      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash
-      window.history.replaceState(null, '', next)
-    }
-    const data = decodeScenarioCode(code)
-    if (!data) {
-      setToast({ kind: 'error', message: 'Shared link is invalid or corrupted.' })
-      stripParam()
-      return
-    }
-    setWeapons(data.weapons.map(rehydrateWeapon))
-    setTargets(data.targets.map(rehydrateTarget))
-    setUnitBuffs(rehydrateUnitBuffs(data.unitBuffs))
-    setDefenderUnitBuffs(rehydrateTargetUnitBuffs(data.defenderUnitBuffs))
-    if (typeof data.highPrecision === 'boolean') setHighPrecision(data.highPrecision)
-    setResult(null)
-    setError(null)
-    stripParam()
-  }, [])
-
-  // ---- auto-save ----
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      saveScenario({
-        weapons: weapons.map(stripId),
-        targets: targets.map(stripId),
-        unitBuffs,
-        defenderUnitBuffs,
-        highPrecision,
-      })
-    }, 300)
-    return () => clearTimeout(handle)
-  }, [weapons, targets, unitBuffs, defenderUnitBuffs, highPrecision])
 
   useEffect(() => {
     if (!toast) return
@@ -336,118 +256,6 @@ function AttackSimulatorV2() {
     invalidateResult()
   }
 
-  // ---- import / export ----
-  const handleShare = async () => {
-    const code = encodeScenarioCode({
-      weapons: weapons.map(stripId),
-      targets: targets.map(stripId),
-      unitBuffs,
-      defenderUnitBuffs,
-      highPrecision,
-    })
-    if (!code) {
-      setToast({ kind: 'error', message: 'Could not build share link.' })
-      return
-    }
-    const url = buildShareUrl(code)
-    try {
-      await navigator.clipboard.writeText(url)
-      setToast({ kind: 'success', message: 'Share link copied to clipboard.' })
-    } catch {
-      window.prompt('Copy this share link:', url)
-    }
-  }
-
-  const handleExport = () => {
-    const payload = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      weapons: weapons.map(stripId),
-      targets: targets.map(stripId),
-      unitBuffs,
-      defenderUnitBuffs,
-      highPrecision,
-    }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    a.download = `attack-sim-v2-${stamp}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    setToast({ kind: 'success', message: 'Scenario exported.' })
-  }
-
-  const handleImportClick = () => fileInputRef.current?.click()
-
-  // ---- named scenarios ----
-  const refreshSavedNames = () => setSavedNames(listSavedScenarios())
-
-  const handleSaveAs = () => {
-    const suggested = selectedSlot || ''
-    const name = window.prompt('Save scenario as:', suggested)
-    if (name === null) return
-    const trimmed = name.trim()
-    if (!trimmed) {
-      setToast({ kind: 'error', message: 'Name cannot be empty.' })
-      return
-    }
-    if (savedNames.includes(trimmed) && trimmed !== selectedSlot) {
-      if (!window.confirm(`"${trimmed}" already exists. Overwrite?`)) return
-    }
-    let ok
-    try {
-      ok = saveNamedScenario(trimmed, {
-        weapons: weapons.map(stripId),
-        targets: targets.map(stripId),
-        unitBuffs,
-        defenderUnitBuffs,
-        highPrecision,
-      })
-    } catch (err) {
-      if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved scenarios / sets and try again.' })
-        return
-      }
-      throw err
-    }
-    if (ok) {
-      refreshSavedNames()
-      setSelectedSlot(trimmed)
-      setToast({ kind: 'success', message: `Saved "${trimmed}".` })
-    }
-  }
-
-  const handleLoadSlot = (name) => {
-    setSelectedSlot(name)
-    if (!name) return
-    const data = loadNamedScenario(name)
-    if (!data || !Array.isArray(data.weapons) || !Array.isArray(data.targets)) {
-      setToast({ kind: 'error', message: `Could not load "${name}".` })
-      return
-    }
-    setWeapons(data.weapons.map(rehydrateWeapon))
-    setTargets(data.targets.map(rehydrateTarget))
-    setUnitBuffs(rehydrateUnitBuffs(data.unitBuffs))
-    setDefenderUnitBuffs(rehydrateTargetUnitBuffs(data.defenderUnitBuffs))
-    if (typeof data.highPrecision === 'boolean') setHighPrecision(data.highPrecision)
-    setResult(null)
-    setError(null)
-    setToast({ kind: 'success', message: `Loaded "${name}".` })
-  }
-
-  const handleDeleteSlot = () => {
-    if (!selectedSlot) return
-    if (!window.confirm(`Delete saved scenario "${selectedSlot}"?`)) return
-    deleteNamedScenario(selectedSlot)
-    setSelectedSlot('')
-    refreshSavedNames()
-    setToast({ kind: 'success', message: `Deleted "${selectedSlot}".` })
-  }
-
   // ---- attacker profile sets (weapons + unit buffs) ----
   const refreshWeaponSets = () => setSavedWeaponSets(listSavedWeaponSets())
 
@@ -471,7 +279,7 @@ function AttackSimulatorV2() {
       })
     } catch (err) {
       if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved scenarios / sets and try again.' })
+        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved profiles and try again.' })
         return
       }
       throw err
@@ -537,7 +345,7 @@ function AttackSimulatorV2() {
       })
     } catch (err) {
       if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved scenarios / sets and try again.' })
+        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved profiles and try again.' })
         return
       }
       throw err
@@ -580,43 +388,97 @@ function AttackSimulatorV2() {
     setToast({ kind: 'success', message: `Deleted defender profile "${selectedTargetSet}".` })
   }
 
-  const handleImportFile = async (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
+  const handleExportWeaponLibrary = () => {
+    try {
+      const profiles = getSavedWeaponSetLibrary()
+      const count = Object.keys(profiles).length
+      if (count === 0) throw new Error('no saved attacker profiles')
+      downloadJson(
+        buildAttackerProfileLibraryExport(profiles),
+        'attack-sim-attacker-profiles'
+      )
+      setToast({
+        kind: 'success',
+        message: `Exported ${count} attacker ${count === 1 ? 'profile' : 'profiles'}.`,
+      })
+    } catch (err) {
+      setToast({
+        kind: 'error',
+        message: `Attacker profile export failed: ${err.message || 'unknown error'}.`,
+      })
+    }
+  }
+
+  const handleExportTargetLibrary = () => {
+    try {
+      const profiles = getSavedTargetSetLibrary()
+      const count = Object.keys(profiles).length
+      if (count === 0) throw new Error('no saved defender profiles')
+      downloadJson(
+        buildDefenderProfileLibraryExport(profiles),
+        'attack-sim-defender-profiles'
+      )
+      setToast({
+        kind: 'success',
+        message: `Exported ${count} defender ${count === 1 ? 'profile' : 'profiles'}.`,
+      })
+    } catch (err) {
+      setToast({
+        kind: 'error',
+        message: `Defender profile export failed: ${err.message || 'unknown error'}.`,
+      })
+    }
+  }
+
+  const handleImportProfileLibrary = async (
+    event,
+    parseLibrary,
+    mergeLibrary,
+    refreshLibrary,
+    side
+  ) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
     if (!file) return
     try {
       const text = await file.text()
       let data
       try { data = JSON.parse(text) } catch { throw new Error('not valid JSON') }
-      if (!data || typeof data !== 'object') throw new Error('top-level value is not an object')
-      if (data.version !== 2)
-        throw new Error(
-          `unsupported schema version ${JSON.stringify(data.version)} (this importer only accepts v2 exports)`
-        )
-      if (!Array.isArray(data.weapons) || data.weapons.length === 0)
-        throw new Error('"weapons" must be a non-empty array')
-      if (!Array.isArray(data.targets) || data.targets.length === 0)
-        throw new Error('"targets" must be a non-empty array')
-      data.weapons.forEach((w, i) => {
-        const err = validateWeaponShape(w)
-        if (err) throw new Error(`weapons[${i}]: ${err}`)
+      const profiles = parseLibrary(data)
+      const importedCount = Object.keys(profiles).length
+      const stored = mergeLibrary(profiles)
+      if (!stored) throw new Error('browser storage is unavailable')
+      refreshLibrary()
+      setToast({
+        kind: 'success',
+        message: `Imported ${importedCount} ${side} ${importedCount === 1 ? 'profile' : 'profiles'}.`,
       })
-      data.targets.forEach((tg, i) => {
-        const err = validateTargetShape(tg)
-        if (err) throw new Error(`targets[${i}]: ${err}`)
-      })
-      setWeapons(data.weapons.map(rehydrateWeapon))
-      setTargets(data.targets.map(rehydrateTarget))
-      setUnitBuffs(rehydrateUnitBuffs(data.unitBuffs))
-      setDefenderUnitBuffs(rehydrateTargetUnitBuffs(data.defenderUnitBuffs))
-      if (typeof data.highPrecision === 'boolean') setHighPrecision(data.highPrecision)
-      setResult(null)
-      setError(null)
-      setToast({ kind: 'success', message: 'Scenario imported.' })
     } catch (err) {
-      setToast({ kind: 'error', message: `Import failed: ${err.message || 'invalid file'}.` })
+      const message =
+        err instanceof StorageQuotaError
+          ? 'Browser storage is full. Delete some saved profiles and try again.'
+          : `${side[0].toUpperCase()}${side.slice(1)} profile import failed: ${err.message || 'invalid file'}.`
+      setToast({ kind: 'error', message })
     }
   }
+
+  const handleImportWeaponLibrary = (event) =>
+    handleImportProfileLibrary(
+      event,
+      parseAttackerProfileLibrary,
+      mergeSavedWeaponSetLibrary,
+      refreshWeaponSets,
+      'attacker'
+    )
+
+  const handleImportTargetLibrary = (event) =>
+    handleImportProfileLibrary(
+      event,
+      parseDefenderProfileLibrary,
+      mergeSavedTargetSetLibrary,
+      refreshTargetSets,
+      'defender'
+    )
 
   // ---- run ----
   const handleRun = (e) => {
@@ -695,60 +557,7 @@ function AttackSimulatorV2() {
           </span>
         </span>
       }
-    >
-      <div className="attack-sim-toolbar">
-        <div className="toolbar-group" role="group" aria-label="Saved scenarios">
-          <span className="toolbar-group-label">{t('scenario')}</span>
-          <select
-            className="toolbar-select"
-            value={selectedSlot}
-            onChange={(e) => handleLoadSlot(e.target.value)}
-            aria-label="Load saved scenario"
-          >
-            <option value="">{t('savedScenarios')}</option>
-            {savedNames.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-          <button type="button" className="toolbar-button" onClick={handleSaveAs}>
-            <Save size={14} />
-            <span>{t('saveAs')}</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-button"
-            onClick={handleShare}
-            title="Copy a share link for the current scenario"
-          >
-            <Link2 size={14} />
-            <span>{t('share')}</span>
-          </button>
-          <button
-            type="button"
-            className="toolbar-button toolbar-button--danger"
-            onClick={handleDeleteSlot}
-            disabled={!selectedSlot}
-            title={selectedSlot ? `Delete "${selectedSlot}"` : 'Select a saved scenario to delete'}
-            aria-label="Delete selected scenario"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-
-        {!isMobile && (
-          <div className="toolbar-group" role="group" aria-label="Data">
-            <span className="toolbar-group-label">{t('data')}</span>
-            <button type="button" className="toolbar-button" onClick={handleImportClick}>
-              <Upload size={14} />
-              <span>{t('import')}</span>
-            </button>
-            <button type="button" className="toolbar-button" onClick={handleExport}>
-              <Download size={14} />
-              <span>{t('export')}</span>
-            </button>
-          </div>
-        )}
-
+      actions={
         <div className="toolbar-group lang-toggle-group" role="group" aria-label="Language">
           <button
             type="button"
@@ -765,15 +574,8 @@ function AttackSimulatorV2() {
             中文
           </button>
         </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          onChange={handleImportFile}
-          style={{ display: 'none' }}
-        />
-      </div>
+      }
+    >
       {toast && (
         <div className="attack-sim-toast-row">
           <span className={`toolbar-toast toolbar-toast--${toast.kind}`}>{toast.message}</span>
@@ -791,13 +593,24 @@ function AttackSimulatorV2() {
             placeholder={t('savedAttackerSets')}
             onChange={handleLoadWeaponSet}
             onSave={handleSaveWeaponSet}
-            saveLabel="Save Profile…"
+            saveLabel={t('saveProfile')}
             onDelete={handleDeleteWeaponSet}
             deleteDisabled={!selectedWeaponSet}
             deleteTitle={selectedWeaponSet ? `Delete "${selectedWeaponSet}"` : 'Select a saved attacker profile to delete'}
             groupAriaLabel="Saved attacker profiles"
             selectAriaLabel="Load saved attacker profile"
             deleteAriaLabel="Delete selected attacker profile"
+            onImportFile={handleImportWeaponLibrary}
+            importLabel={t('import')}
+            importTitle="Import and merge an attacker profile library"
+            onExport={handleExportWeaponLibrary}
+            exportLabel={t('export')}
+            exportTitle={
+              savedWeaponSets.length
+                ? 'Export all saved attacker profiles'
+                : 'Save an attacker profile before exporting'
+            }
+            exportDisabled={savedWeaponSets.length === 0}
           />
 
           <section className="attack-sim-unit-group">
@@ -845,13 +658,24 @@ function AttackSimulatorV2() {
             placeholder={t('savedDefenderSets')}
             onChange={handleLoadTargetSet}
             onSave={handleSaveTargetSet}
-            saveLabel="Save Profile…"
+            saveLabel={t('saveProfile')}
             onDelete={handleDeleteTargetSet}
             deleteDisabled={!selectedTargetSet}
             deleteTitle={selectedTargetSet ? `Delete "${selectedTargetSet}"` : 'Select a saved defender profile to delete'}
             groupAriaLabel="Saved defender profiles"
             selectAriaLabel="Load saved defender profile"
             deleteAriaLabel="Delete selected defender profile"
+            onImportFile={handleImportTargetLibrary}
+            importLabel={t('import')}
+            importTitle="Import and merge a defender profile library"
+            onExport={handleExportTargetLibrary}
+            exportLabel={t('export')}
+            exportTitle={
+              savedTargetSets.length
+                ? 'Export all saved defender profiles'
+                : 'Save a defender profile before exporting'
+            }
+            exportDisabled={savedTargetSets.length === 0}
           />
 
           <section className="attack-sim-unit-group">

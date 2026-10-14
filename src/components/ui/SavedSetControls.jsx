@@ -1,4 +1,5 @@
-import { Save, Trash2 } from 'lucide-react'
+import { useRef } from 'react'
+import { Download, Save, Trash2, Upload } from 'lucide-react'
 
 function SavedSetControls({
   value,
@@ -12,8 +13,17 @@ function SavedSetControls({
   deleteTitle,
   groupAriaLabel,
   selectAriaLabel,
-  deleteAriaLabel
+  deleteAriaLabel,
+  onImportFile,
+  importLabel = 'Import',
+  importTitle,
+  onExport,
+  exportLabel = 'Export',
+  exportTitle,
+  exportDisabled = false,
 }) {
+  const fileInputRef = useRef(null)
+
   return (
     <div className="profile-set-controls" role="group" aria-label={groupAriaLabel}>
       <select
@@ -43,6 +53,34 @@ function SavedSetControls({
       >
         <Trash2 size={14} />
       </button>
+      <button
+        type="button"
+        className="toolbar-button"
+        onClick={() => fileInputRef.current?.click()}
+        title={importTitle}
+        aria-label={importTitle}
+      >
+        <Upload size={14} />
+        <span>{importLabel}</span>
+      </button>
+      <button
+        type="button"
+        className="toolbar-button"
+        onClick={onExport}
+        disabled={exportDisabled}
+        title={exportTitle}
+        aria-label={exportTitle}
+      >
+        <Download size={14} />
+        <span>{exportLabel}</span>
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={onImportFile}
+        hidden
+      />
     </div>
   )
 }

@@ -1,12 +1,12 @@
-// Common page wrapper so every page shares the same outer container/title style.
-//
-// Props:
-//   title: optional <h1> title
-//   children: page content
-function Page({ title, children }) {
+function Page({ title, actions, children }) {
   return (
     <div className="page">
-      {title && <h1>{title}</h1>}
+      {(title || actions) && (
+        <header className="page-header">
+          {title && <h1>{title}</h1>}
+          {actions && <div className="page-header-actions">{actions}</div>}
+        </header>
+      )}
       {children}
     </div>
   )

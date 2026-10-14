@@ -55,8 +55,8 @@ the quick calculators, this one supports:
 - **Multiple target profiles** (e.g. squad + leader), each with its own
   T/W/Sv/Inv and defensive buffs (FNP, FNP vs MORTAL, −1 to hit, −1 to
   wound, conditional −1 wound when S>T, HALF DAMAGE, DAMAGE −1, DAMAGE = 1).
-- **Persistence**: scenario auto-saves to `localStorage`; named slots library;
-  JSON Import/Export (desktop only).
+- **Persistence**: reusable attacker and defender Profile libraries in
+  `localStorage`, with separate JSON Import/Export for each complete library.
 - **Precision toggle**: 1,000 iterations by default, 10,000 with "High
   precision".
 Results:

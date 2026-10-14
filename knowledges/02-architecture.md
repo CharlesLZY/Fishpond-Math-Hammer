@@ -35,7 +35,7 @@ src/
 ├── main.jsx                    # ReactDOM.createRoot entry
 ├── lib/
 │   ├── attackSimV2Storage.js    # localStorage helpers for Attack Simulator
-│   ├── attackSimV2Share.js      # Compact scenario share-link codec
+│   ├── attackSimV2ProfileLibrary.js # Profile library JSON schema and validation
 │   ├── attackSimV2Report.js     # Complete localized 40K report formatter
 │   ├── aosAttackReport.js       # AoS Markdown report formatter
 │   └── dice/                    # PURE LOGIC — see 03-dice-library.md
@@ -156,14 +156,17 @@ pairing and mission-asset check lives in `config/__tests__/battleplans11e.test.j
 
 ## Persistence layer (`src/lib/attackSimV2Storage.js`)
 
-The Attack Simulator persists four things to **`localStorage`**:
+The Attack Simulator persists two reusable Profile libraries to
+**`localStorage`**:
 
 | Key | Shape | Purpose |
 |---|---|---|
-| `attackSimV2:scenario:v1` | `{ weapons, targets, unitBuffs, defenderUnitBuffs, highPrecision }` | Auto-saved current scenario (debounced 300 ms). |
-| `attackSimV2:library:v1` | `{ [name]: scenario }` | Named scenario slots ("Save As…"). |
 | `attackSimV2:weaponSets:v1` | `{ [name]: { weapons, unitBuffs } }` | Reusable attacker profile sets. |
 | `attackSimV2:targetSets:v1` | `{ [name]: { targets, defenderUnitBuffs } }` | Reusable defender profile sets. |
+
+Each side exports and imports independently. An import merges the file into
+the existing library and overwrites same-name Profiles without prompting;
+unrelated locally saved Profiles remain intact.
 
 ### Why `localStorage` (and not IndexedDB)
 The data is small and the API needs to be **synchronous** so React's lazy
@@ -172,8 +175,6 @@ hydration / loading state. Sizing budget for the 5 MB per-origin quota
 (Safari / iOS being the tightest):
 
 - Single weapon JSON ≈ 280–400 B; single target ≈ 230–310 B.
-- Typical scenario (5 weapons + 3 targets) ≈ 3 KB → **~1,600** fit in 5 MB.
-- Big scenario (20 weapons + 10 targets) ≈ 11 KB → **~450** fit in 5 MB.
 - Pure attacker-set library: **~2,500** sets fit in 5 MB.
 
 Realistic users save tens, not thousands, of slots, so localStorage is
@@ -182,14 +183,12 @@ switching to IndexedDB (async API, hydration sequencing, more code) is
 not justified.
 
 ### Quota handling
-Writes from the explicit "Save As…" / "Save attacker set…" / "Save defender
-set…" handlers re-throw browser `QuotaExceededError` as
+Writes from the explicit "Save attacker Profile…" / "Save defender Profile…"
+and library-import handlers re-throw browser `QuotaExceededError` as
 `StorageQuotaError`, which the UI catches and surfaces as a toast
-(*"Browser storage is full…"*). The debounced auto-save swallows it
-silently — the user already sees the error on their explicit action, and
-the on-screen scenario remains intact. Disabled-storage / private-mode
-failures (anything other than quota) are also swallowed silently, so
-the app degrades gracefully to a non-persistent session.
+(*"Browser storage is full…"*). Disabled-storage / private-mode failures
+degrade gracefully to a non-persistent session and imports surface the
+storage failure explicitly.
 
 ## Macro Battleplan persistence (`src/macro-battleplan/store/board11eStore.js`)
 

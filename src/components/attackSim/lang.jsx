@@ -10,17 +10,12 @@ const translations = {
     pageTitle: '40K Attack Simulator',
     editionTooltip: 'Based on Warhammer 40,000 11th Edition rules',
 
-    // Toolbar
-    scenario: 'Scenario',
-    savedScenarios: '— Saved scenarios —',
-    saveAs: 'Save As…',
-    data: 'Data',
+    // Profile libraries
     import: 'Import',
     export: 'Export',
-    share: 'Share',
     savedAttackerSets: '— Saved attacker profiles —',
     savedDefenderSets: '— Saved defender profiles —',
-    saveSet: 'Save Set…',
+    saveProfile: 'Save Profile…',
 
     // Sections
     attackerSection: 'Attacker Profiles',
@@ -155,17 +150,12 @@ const translations = {
     pageTitle: '40K 攻击模拟器',
     editionTooltip: '基于战锤40K 第11版规则',
 
-    // Toolbar
-    scenario: '方案',
-    savedScenarios: '— 已保存配置 —',
-    saveAs: '另存为…',
-    data: '数据',
+    // Profile libraries
     import: '导入',
     export: '导出',
-    share: '分享',
     savedAttackerSets: '— 已保存攻击方配置 —',
     savedDefenderSets: '— 已保存防御方配置 —',
-    saveSet: '保存配置…',
+    saveProfile: '保存 Profile…',
 
     // Sections
     attackerSection: '攻击方面板',

@@ -74,8 +74,6 @@ const rollD6WithReroll = (threshold, rerollMode, critThreshold = 6, budget = nul
   return { success, isCrit, natural: nat }
 }
 
-// Make a fresh reroll-budget for one rolling event. `single` scope gets exactly
-// one reroll; everything else (including missing/legacy values) is unlimited.
 const makeRerollBudget = (scope) =>
   scope === REROLL_SCOPE.SINGLE ? { remaining: 1 } : { remaining: Infinity }
 

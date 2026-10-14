@@ -11,17 +11,17 @@ function About() {
   const handleClearStorage = () => {
     const msg =
       'Clear ALL Fishpond Math Hammer data from this browser?\n\n' +
-      'This deletes every saved Attack Simulator scenario / profile set ' +
+      'This deletes every saved Attack Simulator Profile ' +
       'and every saved 40K Tactical Board and scoreboard. ' +
       'On-screen state is kept until you reload.'
     if (!window.confirm(msg)) return
     try {
       clearAllAttackSimStorage()
       useBoard11eStore.getState().clearAllStorage()
-    } catch {
-      /* ignore */
+      alert('Local storage cleared.')
+    } catch (error) {
+      alert(`Could not clear local storage: ${error.message || 'unknown error'}.`)
     }
-    alert('Local storage cleared.')
   }
 
   return (

@@ -25,7 +25,6 @@ export const randomRerollThreshold = (value) =>
 
 // Scope of a reroll — does the player reroll only ONE qualifying die in the
 // rolling event (e.g. a single stratagem use), or every qualifying die once?
-// 'all' matches the historic / default behaviour of the simulator.
 export const REROLL_SCOPE = {
   ALL: 'all',
   SINGLE: 'single'

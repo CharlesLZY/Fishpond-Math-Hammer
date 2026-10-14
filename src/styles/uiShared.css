@@ -267,8 +267,8 @@
   outline: none;
 }
 
-/* "Saved set" cluster — a select of saved entries plus Save and
-   Trash icon buttons. Slightly inset (dashed border) so it reads
+/* "Saved set" cluster — a select of saved entries plus library actions.
+   Slightly inset (dashed border) so it reads
    as a sub-toolbar tied to the surrounding section. */
 .profile-set-controls {
   display: flex;

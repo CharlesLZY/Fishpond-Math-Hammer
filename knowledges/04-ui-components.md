@@ -15,9 +15,10 @@ import {
 ## Components
 
 ### `Page`
-Wraps content in `.page` div, optional `<h1>{title}</h1>`.
+Wraps content in `.page`. Optional `title` and `actions` render as sibling
+elements in the shared `.page-header`.
 ```jsx
-<Page title="Cheat Sheet">…</Page>
+<Page title="Cheat Sheet" actions={<Toolbar />}>…</Page>
 ```
 
 ### `Tabs`
