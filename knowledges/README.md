@@ -25,7 +25,7 @@ over this project. Read these in order:
 - **Page-level components in `src/components/`** are thin glue: they call
   `lib/dice` for math, hold form state, and compose `ui/` primitives.
   Page-private sub-components live in a same-named subfolder
-  (e.g. `components/attackSimV2/` for the Attack Simulator's cards).
+  (e.g. `components/attackSimulator/` for the Attack Simulator's sub-pages).
 - **Always run `npm run lint` and `npm run build` before declaring done.**
   Both must pass with zero errors.
 - **Do not add features the user did not ask for.** This codebase is

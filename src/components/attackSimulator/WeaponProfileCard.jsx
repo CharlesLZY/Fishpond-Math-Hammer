@@ -17,6 +17,7 @@ import { isValidDiceExpression, mergeWeaponWithUnit } from '../../lib/dice'
 import IntInput from '../attackSim/IntInput'
 import ProfileCardShell from '../attackSim/ProfileCardShell'
 import { useT } from '../attackSim/lang'
+import { buildWeaponSummary } from './profileSummaries'
 import WeaponBuffsDialog from './WeaponBuffsDialog'
 
 const toHitWithTorrentOptions = [
@@ -24,55 +25,7 @@ const toHitWithTorrentOptions = [
   { value: 'torrent', label: 'Torrent' },
 ]
 
-const rerollShort = {
-  'reroll-one': '1s',
-  'reroll-one-two': 'Ones and Twos',
-  'reroll-fail': 'Fails',
-  'reroll-non-critical': 'Non-Crit',
-  'reroll-1-2-3': '≤3',
-}
-
-// Build the list of summary chips shown on the collapsed card.
-function buildSummary(profile, upgrades, t) {
-  const chips = []
-  const push = (key, label, opts = {}) =>
-    chips.push({ key, label, upgraded: !!upgrades?.[key], ...opts })
-
-  if (profile.torrent) push('torrent', t('torrent'))
-  if (profile.lethalHits) push('lethalHits', t('lethalHits'))
-  if (profile.plusOneAttack) push('plusOneAttack', t('plusOneAttack'))
-  if (profile.plusOneDamage) push('plusOneDamage', t('plusOneDamage'))
-  if (profile.plusOneAp) push('plusOneAp', t('plusOneAp'))
-  if (profile.plusOneHit) push('plusOneHit', t('plusOneHit'))
-  if (profile.critHitEnabled)
-    push('critHit', `${t('criticalHit')} ${profile.critHit}+`)
-  if (profile.sustainedHits && profile.sustainedHits !== 'off')
-    push('sustainedHits', `${t('sustainedHits')} ${profile.sustainedHits}`)
-  if (profile.ignoresCover) push('ignoresCover', t('ignoresCover'))
-  if (profile.devastatingWounds) push('devastating', t('devastatingWounds'))
-  if (profile.blast) push('blast', t('blast'))
-  if (profile.cleaveEnabled) push('cleave', `${t('cleave')} ${profile.cleaveValue}`)
-  if (profile.plusOneWound) push('plusOneWound', t('plusOneWound'))
-  if (profile.antiEnabled)
-    push('anti', `${t('anti')} ${profile.antiValue}+`)
-
-  // Reroll summary entries
-  const pushReroll = (key, modeKey, mode, scope, label) => {
-    if (!mode || mode === 'no-reroll') return
-    const short = rerollShort[mode] || mode
-    const scopeTag = scope === 'single' ? ` · ${t('rerollScopeSingle')}` : ''
-    push(modeKey, `${label}: ${short}${scopeTag}`, { isReroll: true, key })
-  }
-  if (!profile.torrent)
-    pushReroll('hitReroll-chip', 'hitReroll', profile.hitReroll, profile.hitRerollScope, t('hitReroll'))
-  pushReroll('woundReroll-chip', 'woundReroll', profile.woundReroll, profile.woundRerollScope, t('woundReroll'))
-  pushReroll('attackReroll-chip', 'attackReroll', profile.attackReroll, profile.attackRerollScope, t('attackReroll'))
-  pushReroll('damageReroll-chip', 'damageReroll', profile.damageReroll, profile.damageRerollScope, t('damageReroll'))
-
-  return chips
-}
-
-function WeaponProfileCardV2({
+function WeaponProfileCard({
   profile,
   index,
   total,
@@ -100,7 +53,11 @@ function WeaponProfileCardV2({
 
   // Build the summary from the effective profile so buffs granted purely by
   // the unit-wide layer (which aren't on the raw weapon) still appear.
-  const summary = buildSummary(mergeWeaponWithUnit(profile, unitBuffs), upgrades, t)
+  const summary = buildWeaponSummary(
+    mergeWeaponWithUnit(profile, unitBuffs),
+    upgrades,
+    t
+  )
 
   return (
     <>
@@ -235,4 +192,4 @@ function WeaponProfileCardV2({
   )
 }
 
-export default WeaponProfileCardV2
+export default WeaponProfileCard

@@ -1,5 +1,5 @@
-const KEY_WEAPON_SETS = 'attackSimV2:weaponSets:v1'
-const KEY_TARGET_SETS = 'attackSimV2:targetSets:v1'
+const KEY_WEAPON_SETS = 'attackSim:attackerProfiles'
+const KEY_TARGET_SETS = 'attackSim:defenderProfiles'
 
 const STORAGE_KEYS = [KEY_WEAPON_SETS, KEY_TARGET_SETS]
 
@@ -62,6 +62,17 @@ const deleteFromCollection = (key, name) => {
   return writeKey(key, col)
 }
 
+const renameInCollection = (key, currentName, nextName) => {
+  const trimmed = (nextName || '').trim()
+  if (!trimmed) return false
+  const collection = readCollection(key)
+  if (!Object.hasOwn(collection, currentName)) return false
+  const value = collection[currentName]
+  delete collection[currentName]
+  collection[trimmed] = value
+  return writeKey(key, collection)
+}
+
 const mergeCollection = (key, imported) =>
   writeKey(key, { ...readCollection(key), ...imported })
 
@@ -75,6 +86,8 @@ export const loadNamedWeaponSet = (name) =>
   loadFromCollection(KEY_WEAPON_SETS, name)
 export const deleteNamedWeaponSet = (name) =>
   deleteFromCollection(KEY_WEAPON_SETS, name)
+export const renameNamedWeaponSet = (currentName, nextName) =>
+  renameInCollection(KEY_WEAPON_SETS, currentName, nextName)
 export const getSavedWeaponSetLibrary = () =>
   readCollection(KEY_WEAPON_SETS)
 export const mergeSavedWeaponSetLibrary = (profiles) =>
@@ -90,6 +103,8 @@ export const loadNamedTargetSet = (name) =>
   loadFromCollection(KEY_TARGET_SETS, name)
 export const deleteNamedTargetSet = (name) =>
   deleteFromCollection(KEY_TARGET_SETS, name)
+export const renameNamedTargetSet = (currentName, nextName) =>
+  renameInCollection(KEY_TARGET_SETS, currentName, nextName)
 export const getSavedTargetSetLibrary = () =>
   readCollection(KEY_TARGET_SETS)
 export const mergeSavedTargetSetLibrary = (profiles) =>

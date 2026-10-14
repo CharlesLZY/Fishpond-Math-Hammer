@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   ATTACKER_PROFILE_LIBRARY_KIND,
   DEFENDER_PROFILE_LIBRARY_KIND,
-  PROFILE_LIBRARY_SCHEMA_VERSION,
   buildAttackerProfileLibraryExport,
   buildDefenderProfileLibraryExport,
   parseAttackerProfileLibrary,
   parseDefenderProfileLibrary,
-} from '../attackSimV2ProfileLibrary'
+} from '../attackSimProfileLibrary'
 
 const weapon = {
   id: 10,
@@ -46,7 +45,6 @@ describe('Attack Simulator profile-library transfer', () => {
       },
     })
 
-    expect(payload.schemaVersion).toBe(PROFILE_LIBRARY_SCHEMA_VERSION)
     expect(payload.kind).toBe(ATTACKER_PROFILE_LIBRARY_KIND)
     expect(parseAttackerProfileLibrary(payload)).toEqual({
       Infantry: {

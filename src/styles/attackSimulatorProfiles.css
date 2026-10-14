@@ -56,7 +56,7 @@
   margin: 0;
 }
 
-/* V2 sits inside the amber unit-group wrapper, so the tile borrows that
+/* Profile cards sit inside the amber unit-group wrapper, so the tile borrows that
    slightly warmer amber to feel like part of the same panel. The base
    styles for `.add-profile-tile` live in attackSimulator.css. */
 .attack-sim-unit-group .add-profile-tile {

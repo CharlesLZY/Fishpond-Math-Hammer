@@ -6,9 +6,11 @@ import {
   loadNamedWeaponSet,
   mergeSavedTargetSetLibrary,
   mergeSavedWeaponSetLibrary,
+  renameNamedTargetSet,
+  renameNamedWeaponSet,
   saveNamedTargetSet,
   saveNamedWeaponSet,
-} from '../attackSimV2Storage'
+} from '../attackSimStorage'
 
 const weaponPayload = (strength) => ({
   weapons: [{ name: `Weapon ${strength}`, strength }],
@@ -27,6 +29,7 @@ const sides = [
     list: listSavedWeaponSets,
     load: loadNamedWeaponSet,
     merge: mergeSavedWeaponSetLibrary,
+    rename: renameNamedWeaponSet,
     payload: weaponPayload,
     importedValue: (profile) => profile.weapons[0].strength,
   },
@@ -36,6 +39,7 @@ const sides = [
     list: listSavedTargetSets,
     load: loadNamedTargetSet,
     merge: mergeSavedTargetSetLibrary,
+    rename: renameNamedTargetSet,
     payload: targetPayload,
     importedValue: (profile) => profile.targets[0].toughness,
   },
@@ -84,5 +88,17 @@ describe.each(sides)('$name Profile library imports', (side) => {
     expect(side.importedValue(side.load('Profile 5'))).toBe(50)
     expect(side.load('Profile 4')).toEqual(side.payload(4))
     expect(side.load('Profile 6')).toEqual(side.payload(6))
+  })
+
+  it('renames one Profile without changing the rest of the library', () => {
+    side.save('Original', side.payload(4))
+    side.save('Unchanged', side.payload(5))
+
+    expect(side.rename('Original', 'Renamed')).toBe(true)
+
+    expect(side.list()).toEqual(['Renamed', 'Unchanged'])
+    expect(side.load('Original')).toBeNull()
+    expect(side.load('Renamed')).toEqual(side.payload(4))
+    expect(side.load('Unchanged')).toEqual(side.payload(5))
   })
 })

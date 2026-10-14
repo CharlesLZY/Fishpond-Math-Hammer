@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAttackSimV2Report } from '../attackSimV2Report'
+import { buildAttackSimReport } from '../attackSimReport'
 
 const t = (key, value) =>
   key === 'reportIterations' ? `${value} iterations` : key
@@ -95,7 +95,7 @@ const build = ({
   defenderBuffs = defenderUnitBuffs(),
   result = null,
 } = {}) =>
-  buildAttackSimV2Report(
+  buildAttackSimReport(
     weapons,
     targets,
     unitBuffs,
@@ -104,7 +104,7 @@ const build = ({
     t
   )
 
-describe('buildAttackSimV2Report', () => {
+describe('buildAttackSimReport', () => {
   it('includes every configurable weapon ability and reroll', () => {
     const report = build({
       weapons: [

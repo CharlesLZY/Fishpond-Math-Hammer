@@ -1,6 +1,5 @@
 import { isValidDiceExpression } from './dice'
 
-export const PROFILE_LIBRARY_SCHEMA_VERSION = 1
 export const ATTACKER_PROFILE_LIBRARY_KIND =
   'fishpond.attack-simulator.attacker-profile-library'
 export const DEFENDER_PROFILE_LIBRARY_KIND =
@@ -60,7 +59,6 @@ export const validateTargetShape = (target) => {
 const buildProfileLibraryExport = (kind, profiles) => {
   if (!isRecord(profiles)) throw new Error('"profiles" must be an object')
   return {
-    schemaVersion: PROFILE_LIBRARY_SCHEMA_VERSION,
     kind,
     exportedAt: new Date().toISOString(),
     profiles,
@@ -81,11 +79,6 @@ const normalizeOptionalRecord = (value, path) => {
 
 const parseProfileLibrary = (data, expectedKind, normalizeProfile) => {
   if (!isRecord(data)) throw new Error('top-level value is not an object')
-  if (data.schemaVersion !== PROFILE_LIBRARY_SCHEMA_VERSION) {
-    throw new Error(
-      `unsupported schema version ${JSON.stringify(data.schemaVersion)}`
-    )
-  }
   if (data.kind !== expectedKind) {
     throw new Error(
       `wrong profile library type ${JSON.stringify(data.kind)}`

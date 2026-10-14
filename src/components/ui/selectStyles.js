@@ -1,10 +1,7 @@
 // React-Select custom styles configuration shared across the app.
 // Centralizes the dark theme + amber-accent look used by every form select.
 //
-// Heights are unified with the shared form controls (stat-cell inputs,
-// toolbar-select, toolbar-button) at 34px so dropdowns and input boxes
-// line up cleanly across the Attack Simulator and Dice Calculator pages.
-const CONTROL_HEIGHT = 34
+const CONTROL_HEIGHT = 'var(--form-control-height, 34px)'
 
 export const selectStyles = {
   control: (baseStyles, state) => ({
@@ -12,8 +9,8 @@ export const selectStyles = {
     backgroundColor: '#2a2a2a',
     borderColor: state.isFocused ? '#fbbf24' : '#4a4a4a',
     boxShadow: state.isFocused ? 'none' : 'none',
-    minHeight: `${CONTROL_HEIGHT}px`,
-    height: `${CONTROL_HEIGHT}px`,
+    minHeight: CONTROL_HEIGHT,
+    height: CONTROL_HEIGHT,
     padding: '0 2px',
     cursor: 'pointer',
     '&:hover': {
@@ -26,7 +23,8 @@ export const selectStyles = {
   }),
   singleValue: (baseStyles) => ({
     ...baseStyles,
-    color: '#d0d0d0'
+    color: '#d0d0d0',
+    fontSize: 'var(--select-font-size, inherit)'
   }),
   menuList: (baseStyles) => ({
     ...baseStyles,
@@ -36,6 +34,8 @@ export const selectStyles = {
     ...baseStyles,
     backgroundColor: state.isFocused ? '#3a3a3a' : '#2a2a2a',
     color: state.isSelected ? '#fbbf24' : '#d0d0d0',
+    minHeight: 'var(--select-option-height, auto)',
+    fontSize: 'var(--select-font-size, inherit)',
     cursor: 'pointer',
     '&:hover': {
       backgroundColor: '#3a3a3a'
@@ -55,7 +55,7 @@ export const selectStyles = {
     }
   }),
   // Only used when a consumer passes menuPortalTarget; ensures the floating
-  // menu renders above modal dialogs (z-index 1000 in attackSimulatorV2.css).
+  // menu renders above modal dialogs (z-index 1000 in attackSimulatorProfiles.css).
   menuPortal: (baseStyles) => ({
     ...baseStyles,
     zIndex: 2000
@@ -71,8 +71,8 @@ export const buffSelectStyles = {
   }),
   control: (baseStyles, state) => ({
     ...selectStyles.control(baseStyles, state),
-    minHeight: `${CONTROL_HEIGHT}px`,
-    height: `${CONTROL_HEIGHT}px`,
+    minHeight: CONTROL_HEIGHT,
+    height: CONTROL_HEIGHT,
     padding: '0 2px'
   }),
   valueContainer: (baseStyles) => ({
@@ -81,14 +81,14 @@ export const buffSelectStyles = {
   }),
   singleValue: (baseStyles) => ({
     ...selectStyles.singleValue(baseStyles),
-    fontSize: '13px',
+    fontSize: 'var(--select-font-size, 13px)',
     overflow: 'visible',
     textOverflow: 'clip',
     maxWidth: '100%'
   }),
   option: (baseStyles, state) => ({
     ...selectStyles.option(baseStyles, state),
-    fontSize: '13px',
+    fontSize: 'var(--select-font-size, 13px)',
     padding: '4px 8px'
   }),
   dropdownIndicator: (baseStyles) => ({

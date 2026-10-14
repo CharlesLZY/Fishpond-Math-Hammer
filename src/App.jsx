@@ -1,8 +1,11 @@
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import './styles/app.css'
 import Sidebar from './components/Sidebar'
 import DiceCalculator from './components/DiceCalculator'
-import AttackSimulator from './components/AttackSimulatorV2'
+import AttackSimulator from './components/AttackSimulator'
+import AttackSimulatorLayout from './components/attackSimulator/AttackSimulatorLayout'
+import ProfileLibrary from './components/attackSimulator/ProfileLibrary'
+import ProfileComparison from './components/attackSimulator/ProfileComparison'
 import AoSAttackSimulator from './components/AoSAttackSimulator'
 import DiceRoller from './components/DiceRoller'
 import Cheatsheet from './components/Cheatsheet'
@@ -16,11 +19,12 @@ function AppContent() {
   const isMacroBattleplan = location.pathname === '/macro-battleplan'
 
   const getPageKey = () => {
+    if (location.pathname.startsWith('/attack-simulator')) {
+      return 'attack-simulator'
+    }
     switch (location.pathname) {
       case '/dice-calculator':
         return 'dice-calculator'
-      case '/attack-simulator':
-        return 'attack-simulator'
       case '/aos-attack-simulator':
         return 'aos-attack-simulator'
       case '/dice-roller':
@@ -72,12 +76,16 @@ function AppContent() {
           <Routes>
             <Route path="/dice-calculator" element={<DiceCalculator />} />
             <Route path="/macro-battleplan" element={<MacroBattleplan />} />
-            <Route path="/attack-simulator" element={<AttackSimulator />} />
+            <Route path="/attack-simulator" element={<AttackSimulatorLayout />}>
+              <Route index element={<AttackSimulator />} />
+              <Route path="profiles" element={<ProfileLibrary />} />
+              <Route path="compare" element={<ProfileComparison />} />
+            </Route>
             <Route path="/aos-attack-simulator" element={<AoSAttackSimulator />} />
             <Route path="/dice-roller" element={<DiceRoller />} />
             <Route path="/cheat-sheet" element={<Cheatsheet />} />
             <Route path="/about" element={<About />} />
-            <Route path="/" element={<AttackSimulator />} />
+            <Route path="/" element={<Navigate to="/attack-simulator" replace />} />
           </Routes>
         </main>
         <Footer onCopyrightClick={() => navigate('/about')} />

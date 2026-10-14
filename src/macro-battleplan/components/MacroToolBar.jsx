@@ -11,7 +11,7 @@ import {
   GripHorizontal,
 } from 'lucide-react'
 import { useBoard11eStore } from '../store/board11eStore'
-import { DRAW_COLOR_PALETTE } from '../config/board'
+import { TACTICAL_LINE_COLORS } from '../../lib/colors'
 
 const TOOLS = [
   { id: 'cursor', icon: <MousePointer2 size={15} />, title: 'Cursor (Esc / A)' },
@@ -202,7 +202,7 @@ export function MacroToolBar() {
         </button>
         {colorOpen && (
           <div className="mbp-toolbar__color-popover" role="listbox" aria-label="Pick line color">
-            {DRAW_COLOR_PALETTE.map((c) => {
+            {TACTICAL_LINE_COLORS.map((c) => {
               const active = drawColor.toLowerCase() === c.value.toLowerCase()
               return (
                 <button

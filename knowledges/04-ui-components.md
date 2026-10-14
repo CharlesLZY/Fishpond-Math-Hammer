@@ -16,7 +16,8 @@ import {
 
 ### `Page`
 Wraps content in `.page`. Optional `title` and `actions` render as sibling
-elements in the shared `.page-header`.
+elements in the shared `.page-header`. An optional `className` scopes
+page-specific styles without affecting other pages.
 ```jsx
 <Page title="Cheat Sheet" actions={<Toolbar />}>…</Page>
 ```
@@ -107,7 +108,7 @@ you change theme colors, do it here.
 If a component is reused only inside one page, keep it in that page-private
 folder instead of promoting it prematurely. The Attack Simulator's
 `ProfileCardShell.jsx` and `SavedSetControls.jsx` live in
-`src/components/attackSim/` and `src/components/attackSimV2/` for exactly that
+`src/components/attackSim/` and `src/components/attackSimulator/` for exactly that
 reason.
 
 ## When to add a new ui component

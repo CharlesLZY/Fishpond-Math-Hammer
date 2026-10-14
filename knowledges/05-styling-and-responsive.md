@@ -20,7 +20,8 @@
 | `diceCalculator.css` | Calculator page layout: `.wound-success-container`, `.kill-probability-container`, `.form-side`, `.result-side`, `.simulation-note`. |
 | `formCard.css` | Shared compact card primitives: `.stat-line`, `.stat-cell`, `.reroll-row`, `.reroll-cell`, `.buff-row`, `.buff-chip*`. |
 | `attackSimulator.css` | Attack Simulator-specific layout and controls: title badge, language toggle, `.profile-card`, `.precision-toggle`, etc. Same dark/amber palette as the rest. |
-| `attackSimulatorV2.css` | Profile summaries, unit-buff panels, and buff-dialog layout for the Attack Simulator. |
+| `attackSimulatorProfiles.css` | Profile summaries, unit-buff panels, and buff-dialog layout for the Attack Simulator. |
+| `attackSimulatorPages.css` | Secondary navigation plus Profile Library and Comparison layouts. |
 | `diceRoller.css` | Dice Roller-specific actions, tray, face counts, and result sections. |
 | `cheatsheet.css` | Probability table. |
 | `about.css`, `footer.css` | Self-explanatory. |
@@ -37,6 +38,22 @@ Three tiers, applied consistently across files:
 Ownership rule of thumb: if a class is used by a shared component, it belongs
 in `uiShared.css` or `formCard.css`. If it is tied to one page's structure, it
 belongs in that page's stylesheet.
+
+### 40K Profile pages
+- Comparison and the Tactical Board line tool share `TACTICAL_LINE_COLORS`
+  in `src/lib/colors.js`. The four attacker slots use Steel Blue, Diff Red,
+  Diff Green, and Gold; Pearl remains available only on the board.
+- Slot colors stay attached to their attacker when other slots are removed
+  or results are ranked.
+- At 768px and below, the comparison table becomes labeled, stacked result
+  cards using the same markup. Long names wrap and no horizontal table
+  scrolling is needed. The run controls remain reachable at the bottom and
+  completed comparisons scroll to the results, respecting reduced motion.
+- Compact previews show two weapon/target entries. Their expansion button
+  reveals every entry and buff without enabling editing.
+- At 768px and below, `.attack-simulator-page` scopes 44px touch targets and
+  16px input text to 40K pages. React-select reads the same control-height
+  variable as native inputs. AoS and other pages retain their existing sizes.
 
 ## Number inputs
 `input[type="number"]` has a fixed `width: 102px` for desktop alignment, but

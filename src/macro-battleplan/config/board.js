@@ -1,4 +1,4 @@
-// Domain constants for the 40K macro battleplan board.
+import { TACTICAL_LINE_COLORS } from '../../lib/colors'
 
 export const PX_PER_INCH = 20
 export const MM_PER_INCH = 25.4
@@ -44,15 +44,4 @@ export const DEFAULT_BASE_COLOR = BASE_COLOR_PALETTE[0].value
 export const baseRadiusPx = (diameterMm) =>
   ((diameterMm / MM_PER_INCH) * PX_PER_INCH) / 2
 
-// Five draw-tool colors used by the ruler/line/free draw overlay.
-// Chosen to remain visible over the official map images and base colors.
-// Green & red match GitHub's diff +/- so they read as "good / bad" markers.
-export const DRAW_COLOR_PALETTE = [
-  { name: 'Steel Blue', value: '#6b8caf' }, // 蓝灰 (default)
-  { name: 'Diff Red',   value: '#f85149' }, // GitHub diff -
-  { name: 'Diff Green', value: '#3fb950' }, // GitHub diff +
-  { name: 'Gold',       value: '#e3b341' }, // saturated yellow
-  { name: 'Pearl',      value: '#e6e1d3' }, // 灰白
-]
-
-export const DEFAULT_DRAW_COLOR = DRAW_COLOR_PALETTE[0].value
+export const DEFAULT_DRAW_COLOR = TACTICAL_LINE_COLORS[0].value

@@ -1,5 +1,5 @@
 import { Page } from './ui'
-import { clearAllAttackSimStorage } from '../lib/attackSimV2Storage'
+import { clearAllAttackSimStorage } from '../lib/attackSimStorage'
 import { useBoard11eStore } from '../macro-battleplan/store/board11eStore'
 import '../styles/about.css'
 

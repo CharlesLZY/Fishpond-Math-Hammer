@@ -3,7 +3,7 @@
 //   2. Read-only summary of active defensive buffs
 //   3. "Edit buffs…" button that opens TargetBuffsDialog
 //
-// Mirrors WeaponProfileCardV2. The `upgrades` map highlights chips that the
+// Mirrors WeaponProfileCard. The `upgrades` map highlights chips that the
 // defender unit-buff layer either added or strengthened.
 
 import { useState } from 'react'
@@ -13,6 +13,7 @@ import { saveOptions } from '../../lib/dice/options'
 import IntInput from '../attackSim/IntInput'
 import ProfileCardShell from '../attackSim/ProfileCardShell'
 import { useT } from '../attackSim/lang'
+import { buildTargetSummary } from './profileSummaries'
 import TargetBuffsDialog from './TargetBuffsDialog'
 
 const invulnOptions = [
@@ -24,53 +25,7 @@ const invulnOptions = [
   { value: '6', label: '6+' },
 ]
 
-// Build the list of summary chips for the collapsed defender card.
-function buildSummary(profile, upgrades, t) {
-  const chips = []
-  const push = (key, label) =>
-    chips.push({ key, label, upgraded: !!upgrades?.[key] })
-
-  if (profile.fnp) push('fnp', `${t('fnp')} ${profile.fnp}+`)
-  if (profile.fnpMortal) push('fnpMortal', `${t('fnpMortal')} ${profile.fnpMortal}+`)
-  if (profile.rerollSaveOnes) push('rerollSaveOnes', t('rerollSaveOnes'))
-  if (profile.benefitOfCover) push('benefitOfCover', t('benefitOfCover'))
-  if (profile.minusOneAp) push('minusOneAp', t('minusOneAp'))
-  if (profile.minusOneToHit) push('minusOneToHit', t('minusOneHit'))
-  if (profile.minusOneToWound) push('minusOneToWound', t('minusOneWound'))
-  if (profile.minusOneToWoundIfStronger)
-    push('minusOneToWoundIfStronger', t('minusOneWoundST'))
-  if (profile.halfDamage) push('halfDamage', t('halfDamage'))
-  if (profile.minusOneDamage) push('minusOneDamage', t('damageMinus1'))
-  if (profile.damageOne) push('damageOne', t('damageOne'))
-
-  // Also surface buffs added purely by the unit layer (not on the profile
-  // itself) so the user can see what's effectively in play.
-  if (upgrades) {
-    const has = new Set(chips.map((c) => c.key))
-    if (upgrades.rerollSaveOnes && !has.has('rerollSaveOnes'))
-      push('rerollSaveOnes', t('rerollSaveOnes'))
-    if (upgrades.benefitOfCover && !has.has('benefitOfCover'))
-      push('benefitOfCover', t('benefitOfCover'))
-    if (upgrades.minusOneAp && !has.has('minusOneAp'))
-      push('minusOneAp', t('minusOneAp'))
-    if (upgrades.minusOneToHit && !has.has('minusOneToHit'))
-      push('minusOneToHit', t('minusOneHit'))
-    if (upgrades.minusOneToWound && !has.has('minusOneToWound'))
-      push('minusOneToWound', t('minusOneWound'))
-    if (upgrades.minusOneToWoundIfStronger && !has.has('minusOneToWoundIfStronger'))
-      push('minusOneToWoundIfStronger', t('minusOneWoundST'))
-    if (upgrades.halfDamage && !has.has('halfDamage'))
-      push('halfDamage', t('halfDamage'))
-    if (upgrades.minusOneDamage && !has.has('minusOneDamage'))
-      push('minusOneDamage', t('damageMinus1'))
-    if (upgrades.damageOne && !has.has('damageOne'))
-      push('damageOne', t('damageOne'))
-  }
-
-  return chips
-}
-
-function TargetProfileCardV2({
+function TargetProfileCard({
   profile,
   index,
   total,
@@ -88,7 +43,7 @@ function TargetProfileCardV2({
   const findOpt = (opts, v) =>
     opts.find((o) => o.value === v.toString()) || opts[0]
 
-  const summary = buildSummary(profile, upgrades, t)
+  const summary = buildTargetSummary(profile, upgrades, t)
 
   return (
     <>
@@ -197,4 +152,4 @@ function TargetProfileCardV2({
   )
 }
 
-export default TargetProfileCardV2
+export default TargetProfileCard

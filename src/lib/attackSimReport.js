@@ -150,7 +150,7 @@ const describeTarget = (target, t) => {
   return head + (buffs.length ? ` [${buffs.join(', ')}]` : '')
 }
 
-export const buildAttackSimV2Report = (
+export const buildAttackSimReport = (
   weapons,
   targets,
   unitBuffs,

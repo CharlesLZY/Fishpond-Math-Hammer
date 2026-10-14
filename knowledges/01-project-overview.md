@@ -21,7 +21,9 @@ No CSS framework and no backend.
 ## Pages (routes)
 | Route | Component | Purpose |
 |---|---|---|
-| `/` and `/attack-simulator` | `AttackSimulatorV2` | Full 40K unit-vs-unit Monte Carlo simulator with profile and unit-wide buffs. |
+| `/` and `/attack-simulator` | `AttackSimulator` | Full 40K unit-vs-unit Monte Carlo simulator with profile and unit-wide buffs. |
+| `/attack-simulator/profiles` | `ProfileLibrary` | Manage, edit, import, and export saved 40K Profiles. |
+| `/attack-simulator/compare` | `ProfileComparison` | Compare 2–4 saved attackers against one saved defender. |
 | `/aos-attack-simulator` | `AoSAttackSimulator` | Streamlined AoS 4E multi-weapon damage simulator. |
 | `/dice-calculator` | `DiceCalculator` | Hosts the 40K Wound Success and AoS Damage calculators. |
 | `/macro-battleplan` | `MacroBattleplan` | Official 11e battleplans with base, drawing, ruler, mission-card, and scoring tools. |
@@ -46,7 +48,7 @@ Rend/Damage, one critical-hit effect, and the defender's Save/Ward. It
 produces expected hits, wounds reaching the save roll, failed saves, critical
 mortal damage, and final damage after Ward.
 
-### 40K Attack Simulator (`AttackSimulatorV2`)
+### 40K Attack Simulator (`AttackSimulator`)
 Monte Carlo simulator for the full 10e attack sequence end-to-end. Unlike
 the quick calculators, this one supports:
 - **Multiple weapon profiles** that fire in user-defined order, each with

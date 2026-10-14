@@ -34,9 +34,11 @@ src/
 ├── App.jsx                     # Router shell
 ├── main.jsx                    # ReactDOM.createRoot entry
 ├── lib/
-│   ├── attackSimV2Storage.js    # localStorage helpers for Attack Simulator
-│   ├── attackSimV2ProfileLibrary.js # Profile library JSON schema and validation
-│   ├── attackSimV2Report.js     # Complete localized 40K report formatter
+│   ├── attackSimStorage.js      # localStorage helpers for Attack Simulator
+│   ├── attackSimProfileLibrary.js # Profile library JSON shape and validation
+│   ├── attackSimProfiles.js     # Profile defaults, hydration, and serialization
+│   ├── attackSimComparison.js   # Saved Profile comparison runner
+│   ├── attackSimReport.js       # Complete localized 40K report formatter
 │   ├── aosAttackReport.js       # AoS Markdown report formatter
 │   └── dice/                    # PURE LOGIC — see 03-dice-library.md
 │       ├── index.js            # Barrel export
@@ -68,14 +70,14 @@ src/
 │   │   ├── IntInput.jsx
 │   │   ├── ProfileCardShell.jsx
 │   │   └── lang.jsx
-│   ├── attackSimV2/            # Profile cards, buff editors, and dialogs
-│   │   ├── WeaponProfileCardV2.jsx
-│   │   ├── TargetProfileCardV2.jsx
+│   ├── attackSimulator/        # 40K sub-pages, Profile editors, and previews
+│   │   ├── WeaponProfileCard.jsx
+│   │   ├── TargetProfileCard.jsx
 │   │   └── ...
 │   ├── DiceCalculator.jsx      # Hosts the two calculator tabs
 │   ├── WoundSuccessCalculator.jsx
 │   ├── AoSDamageCalculator.jsx
-│   ├── AttackSimulatorV2.jsx   # Top-level 40K Attack Simulator page
+│   ├── AttackSimulator.jsx     # 40K simulation workspace
 │   ├── AoSAttackSimulator.jsx  # Top-level AoS Attack Simulator page
 │   ├── Cheatsheet.jsx
 │   ├── About.jsx
@@ -97,7 +99,8 @@ src/
     ├── sidebar.css
   ├── diceCalculator.css      # Calculator page layout only
     ├── attackSimulator.css
-    ├── attackSimulatorV2.css
+    ├── attackSimulatorProfiles.css
+    ├── attackSimulatorPages.css
   ├── macroBattleplan.css     # Macro Battleplan layout + controls + canvas UI
   ├── diceRoller.css
     ├── cheatsheet.css
@@ -134,8 +137,8 @@ src/
 
 ## Page-specific sub-component folders
 `src/components/attackSim/` contains profile-card primitives shared by the
-40K and AoS simulators. `src/components/attackSimV2/` contains components
-private to `AttackSimulatorV2.jsx`.
+40K and AoS simulators. `src/components/attackSimulator/` contains the 40K
+secondary pages and their shared Profile editing/preview components.
 The rule: if a sub-component is only used by one page and is not generic
 enough for `ui/`, put it in a same-named subfolder (`<page>Sim/`,
 `<page>/`, etc.). This keeps `components/` from getting flat-cluttered
@@ -154,15 +157,15 @@ once and passes that result to both the map canvas and `MissionCardsButton`;
 the dialog does not keep a second matchup state. The exhaustive directed-
 pairing and mission-asset check lives in `config/__tests__/battleplans11e.test.js`.
 
-## Persistence layer (`src/lib/attackSimV2Storage.js`)
+## Persistence layer (`src/lib/attackSimStorage.js`)
 
 The Attack Simulator persists two reusable Profile libraries to
 **`localStorage`**:
 
 | Key | Shape | Purpose |
 |---|---|---|
-| `attackSimV2:weaponSets:v1` | `{ [name]: { weapons, unitBuffs } }` | Reusable attacker profile sets. |
-| `attackSimV2:targetSets:v1` | `{ [name]: { targets, defenderUnitBuffs } }` | Reusable defender profile sets. |
+| `attackSim:attackerProfiles` | `{ [name]: { weapons, unitBuffs } }` | Reusable attacker Profiles. |
+| `attackSim:defenderProfiles` | `{ [name]: { targets, defenderUnitBuffs } }` | Reusable defender Profiles. |
 
 Each side exports and imports independently. An import merges the file into
 the existing library and overwrites same-name Profiles without prompting;
