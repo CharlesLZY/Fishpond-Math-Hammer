@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  ArrowLeft,
   Copy,
   Download,
   Pencil,
   Plus,
-  RotateCcw,
   Save,
   Trash2,
   Upload,
@@ -426,7 +426,7 @@ export default function ProfileLibrary() {
                     onClick={handleDiscard}
                     disabled={!dirty}
                   >
-                    <RotateCcw size={14} />
+                    <ArrowLeft size={14} />
                     <span>{t('discardChanges')}</span>
                   </button>
                   <button type="button" className="toolbar-button" onClick={() => openNameDialog('rename')}>
