@@ -42,7 +42,7 @@ function Cheatsheet() {
   return (
     <Page title="Cheatsheet">
       <Tabs
-        variant="cheatsheet-tabs"
+        ariaLabel="Probability tables"
         value={activeTab}
         onChange={setActiveTab}
         tabs={CHEATSHEET_TABS}
@@ -50,7 +50,7 @@ function Cheatsheet() {
 
       <div>
         {activeTab === 'd6' && (
-          <div className="tab-content">
+          <div>
             <table className="probability-table">
               <thead>
                 <tr>
@@ -74,7 +74,7 @@ function Cheatsheet() {
           </div>
         )}
         {activeTab === 'd2d6' && (
-          <div className="tab-content">
+          <div>
             <table className="probability-table">
               <thead>
                 <tr>
@@ -104,7 +104,7 @@ function Cheatsheet() {
           </div>
         )}
         {activeTab === 'd3d6' && (
-          <div className="tab-content">
+          <div>
             <table className="probability-table">
               <thead>
                 <tr>

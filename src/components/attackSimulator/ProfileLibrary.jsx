@@ -332,7 +332,7 @@ export default function ProfileLibrary() {
       <Tabs
         value={side}
         onChange={handleSideChange}
-        variant="profile-library-tabs"
+        ariaLabel={t('profileLibrary')}
         tabs={[
           { value: 'attacker', label: `${t('attackerLibrary')} (${side === 'attacker' ? names.length : listSavedWeaponSets().length})` },
           { value: 'defender', label: `${t('defenderLibrary')} (${side === 'defender' ? names.length : listSavedTargetSets().length})` },

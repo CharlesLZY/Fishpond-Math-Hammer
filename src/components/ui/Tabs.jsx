@@ -1,28 +1,31 @@
-// A reusable tab strip. Visual style comes from the shared UI stylesheet so
-// all tab strips look identical across pages.
-//
-// Props:
-//   value: currently-selected tab value
-//   onChange: (value) => void
-//   tabs: [{ value, label }]
-//   variant: extra modifier class on the wrapper, e.g. 'calculator-tabs'
-//            or 'cheatsheet-tabs' — consumers can use this to apply
-//            page-specific spacing while sharing button styles.
-function Tabs({ value, onChange, tabs, variant }) {
-  const wrapperClass = ['tabs', variant].filter(Boolean).join(' ')
+import { NavLink } from 'react-router-dom'
+
+function Tabs({ value, onChange, tabs, ariaLabel }) {
   return (
-    <div className={wrapperClass}>
+    <nav className="tabs" aria-label={ariaLabel}>
       {tabs.map((tab) => (
-        <button
-          key={tab.value}
-          type="button"
-          className={`tab-button ${value === tab.value ? 'active' : ''}`}
-          onClick={() => onChange(tab.value)}
-        >
-          {tab.label}
-        </button>
+        tab.to ? (
+          <NavLink
+            key={tab.value}
+            to={tab.to}
+            end={tab.end}
+            className={({ isActive }) => `tab-button${isActive ? ' active' : ''}`}
+          >
+            {tab.label}
+          </NavLink>
+        ) : (
+          <button
+            key={tab.value}
+            type="button"
+            className={`tab-button${value === tab.value ? ' active' : ''}`}
+            aria-pressed={value === tab.value}
+            onClick={() => onChange(tab.value)}
+          >
+            {tab.label}
+          </button>
+        )
       ))}
-    </div>
+    </nav>
   )
 }
 

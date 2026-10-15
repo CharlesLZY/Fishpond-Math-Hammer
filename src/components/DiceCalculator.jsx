@@ -15,16 +15,14 @@ function DiceCalculator() {
   return (
     <Page title="Dice Calculator">
       <Tabs
-        variant="calculator-tabs"
+        ariaLabel="Dice calculators"
         value={activeTab}
         onChange={setActiveTab}
         tabs={DICE_TABS}
       />
 
-      <div className="tab-content">
-        {activeTab === 'wound-success' && <WoundSuccessCalculator />}
-        {activeTab === 'aos-damage' && <AoSDamageCalculator />}
-      </div>
+      {activeTab === 'wound-success' && <WoundSuccessCalculator />}
+      {activeTab === 'aos-damage' && <AoSDamageCalculator />}
     </Page>
   )
 }

@@ -27,12 +27,17 @@ page-specific styles without affecting other pages.
 <Tabs
   value={current}
   onChange={setCurrent}
+  ariaLabel="Calculator views"
   tabs={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]}
-  variant="calculator-tabs"  // -> wrapper class becomes "tabs calculator-tabs"
 />
 ```
-Buttons get classes `tab-button` and `active`. Styling lives in
-`src/styles/uiShared.css` which is imported globally from `app.css`.
+For route navigation, give entries a `to` URL and optional `end` flag.
+Those entries render `NavLink`s and derive their active state from the
+current URL; state-based entries remain buttons using `value` / `onChange`.
+Both use `.tabs`, `.tab-button`, and `.active` from `uiShared.css`, with the
+Simulator's compact gray/amber style. On mobile, tabs share the available
+width and wrap labels with a minimum 44px touch target. No per-page tab
+variants or separate navigation styles are needed.
 
 ### `CalculatorLayout`
 Two-column form/result layout used by every calculator.

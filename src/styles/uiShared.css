@@ -1,33 +1,38 @@
 .tabs {
   display: flex;
-  gap: 12px;
-  margin-bottom: 30px;
-  border-bottom: 2px solid #3a3a3a;
-}
-
-.tabs.calculator-tabs {
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 24px;
+  border-bottom: 1px solid #3a3a3a;
 }
 
 .tab-button {
-  padding: 12px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 10px 16px;
   background: transparent;
-  color: #d0d0d0;
-  border: none;
-  border-bottom: 3px solid transparent;
-  font-size: 22px;
+  color: #aaa;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-size: 13px;
   font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
   cursor: pointer;
-  font-family: inherit;
-}
-
-.cheatsheet-tabs .tab-button {
-  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
 .tab-button:hover {
   color: #fbbf24;
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.tab-button:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 3px;
 }
 
 .tab-button.active {
@@ -118,15 +123,18 @@
 }
 
 @media (max-width: 768px) {
-  .tabs,
-  .tabs.calculator-tabs {
-    flex-wrap: wrap;
-    gap: 8px;
+  .tabs {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 2px;
+    margin-bottom: 18px;
   }
 
   .tab-button {
-    font-size: 16px;
-    padding: 10px 14px;
+    min-height: 44px;
+    padding: 8px 4px;
+    touch-action: manipulation;
   }
 
   .calculator-form {

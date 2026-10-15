@@ -1,5 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { Page } from '../ui'
+import { Outlet } from 'react-router-dom'
+import { Page, Tabs } from '../ui'
 import { LangProvider, useT } from '../attackSim/lang'
 import '../../styles/attackSimulator.css'
 import '../../styles/attackSimulatorProfiles.css'
@@ -44,17 +44,14 @@ function AttackSimulatorLayoutContent() {
         </div>
       }
     >
-      <nav className="attack-sim-subnav" aria-label={t('attackSimulatorSections')}>
-        <NavLink to="/attack-simulator" end>
-          {t('navSimulator')}
-        </NavLink>
-        <NavLink to="/attack-simulator/profiles">
-          {t('navProfileLibrary')}
-        </NavLink>
-        <NavLink to="/attack-simulator/compare">
-          {t('navComparison')}
-        </NavLink>
-      </nav>
+      <Tabs
+        ariaLabel={t('attackSimulatorSections')}
+        tabs={[
+          { value: 'simulator', label: t('navSimulator'), to: '/attack-simulator', end: true },
+          { value: 'library', label: t('navProfileLibrary'), to: '/attack-simulator/profiles' },
+          { value: 'comparison', label: t('navComparison'), to: '/attack-simulator/compare' },
+        ]}
+      />
       <Outlet />
     </Page>
   )

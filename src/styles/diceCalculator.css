@@ -13,10 +13,6 @@
 
 @import './formCard.css';
 
-.tab-content {
-  margin-top: 24px;
-}
-
 .wound-success-container {
   display: flex;
   gap: 32px;

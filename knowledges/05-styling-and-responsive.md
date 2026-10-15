@@ -26,6 +26,13 @@
 | `cheatsheet.css` | Probability table. |
 | `about.css`, `footer.css` | Self-explanatory. |
 
+## Tabs
+Simulator's secondary routes, Cheatsheet, Dice Calculator, and Library all
+use `Tabs` and the same rules in `uiShared.css`: 13px text, gray inactive
+labels, amber active underline, and a thin bottom border. Route links and
+state-switching buttons share the style. On small screens, CSS grid gives
+each item an equal-width column and a minimum 44px touch target.
+
 ## Responsive breakpoints
 Three tiers, applied consistently across files:
 
