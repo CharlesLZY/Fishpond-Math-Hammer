@@ -101,11 +101,11 @@ export default function ProfileComparison() {
 
   const handleRun = () => {
     if (!defenderName) {
-      setError('Choose a defender Profile.')
+      setError(t('selectDefender'))
       return
     }
     if (selectedAttackers.length < 2) {
-      setError('Choose at least two attacker Profiles.')
+      setError(t('comparisonMinimumAttackers'))
       return
     }
 
@@ -153,7 +153,6 @@ export default function ProfileComparison() {
       {(attackerNames.length === 0 || defenderNames.length === 0) && (
         <div className="profile-comparison-empty">
           <strong>{t('comparisonNeedsProfiles')}</strong>
-          <span>{t('comparisonNeedsProfilesHint')}</span>
           <Link to="/attack-simulator/profiles">{t('manageProfiles')}</Link>
         </div>
       )}

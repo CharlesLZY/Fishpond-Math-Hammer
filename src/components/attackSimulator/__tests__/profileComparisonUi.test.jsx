@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TACTICAL_LINE_COLORS } from '../../../lib/colors'
 import { makeTarget, makeWeapon } from '../../../lib/attackSimProfiles'
 import { DEFAULT_DRAW_COLOR } from '../../../macro-battleplan/config/board'
-import { LangProvider } from '../../attackSim/lang'
+import { LangProvider, useT } from '../../attackSim/lang'
+import AttackSimulator from '../../AttackSimulator'
 import ProfileComparison, { ComparisonResults } from '../ProfileComparison'
 import { AttackerProfilePreview, DefenderProfilePreview } from '../ProfilePreview'
 import AttackSimulatorLayout from '../AttackSimulatorLayout'
@@ -20,6 +21,24 @@ const result = (expectedKills) => ({
 
 const render = (content) =>
   renderToStaticMarkup(<LangProvider>{content}</LangProvider>)
+
+function ProfileMessages() {
+  const { t } = useT()
+  return (
+    <ul>
+      <li>{t('saveProfileAs', t('attackerProfile'))}</li>
+      <li>{t('profileSaved', t('defenderProfile'), 'User Profile')}</li>
+      <li>{t('profileExistsConfirm', 'User Profile')}</li>
+      <li>{t('newProfileNamePrompt')}</li>
+      <li>{t('renameProfilePrompt')}</li>
+      <li>{t('duplicateProfilePrompt')}</li>
+      <li>{t('discardProfileChangesConfirm')}</li>
+      <li>{t('deleteProfileConfirm', 'User Profile')}</li>
+      <li>{t('profilesExported', 2)}</li>
+      <li>{t('profilesImported', 3, 2, 1)}</li>
+    </ul>
+  )
+}
 
 describe('Profile comparison presentation', () => {
   beforeEach(() => {
@@ -43,6 +62,51 @@ describe('Profile comparison presentation', () => {
     expect(html).toContain('--attacker-color:#6b8caf')
     expect(html).toContain('--attacker-color:#f85149')
     expect(html).not.toContain('#e6e1d3')
+  })
+
+  it.each([
+    ['en', 'Saved Profiles are required for comparison.', 'Manage Profiles'],
+    ['zh', '请先保存用于对比的面板。', '管理面板'],
+  ])('keeps only the empty-state heading and library link in %s', (lang, heading, link) => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => key === 'attackSim_lang' ? lang : null,
+    })
+    const html = render(
+      <MemoryRouter>
+        <ProfileComparison />
+      </MemoryRouter>
+    )
+    const emptyState = html.match(/<div class="profile-comparison-empty">(.+?)<\/div>/)?.[1]
+
+    expect(emptyState).toContain(`<strong>${heading}</strong>`)
+    expect(emptyState).toContain(`>${link}</a>`)
+    expect(emptyState).not.toContain('<span>')
+  })
+
+  it('uses 面板 in Chinese actions and messages without translating saved names', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => key === 'attackSim_lang' ? 'zh' : null,
+    })
+    const messages = render(<ProfileMessages />)
+    for (const text of [
+      '保存攻击方面板，请输入名称：',
+      '已保存防御方面板“User Profile”。',
+      '面板“User Profile”已存在，是否覆盖？',
+      '请输入新面板的名称：',
+      '重命名面板：',
+      '复制面板，请输入名称：',
+      '放弃尚未保存的面板修改？',
+      '删除已保存的面板“User Profile”？',
+      '已导出 2 个面板。',
+      '已导入 3 个面板：新增 2 个，覆盖 1 个。',
+    ]) {
+      expect(messages).toContain(text)
+    }
+    const simulator = render(<AttackSimulator />)
+    expect(simulator).toContain('保存面板…')
+    expect(simulator).toContain('更新面板')
+    expect(simulator).toContain('aria-label="加载已保存的攻击方面板"')
+    expect(simulator).toContain('aria-label="加载已保存的防御方面板"')
   })
 
   it.each([
@@ -169,7 +233,7 @@ describe('Profile comparison presentation', () => {
 
   it.each([
     ['en', 'Library'],
-    ['zh', '配置库'],
+    ['zh', '面板库'],
   ])('uses the shortened %s Library label and omits child Profile counts', (lang, label) => {
     vi.stubGlobal('localStorage', {
       getItem: (key) => ({

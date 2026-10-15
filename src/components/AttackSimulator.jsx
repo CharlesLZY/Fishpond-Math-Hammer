@@ -73,15 +73,15 @@ function AttackSimulator() {
   const refreshWeaponSets = () => setSavedWeaponSets(listSavedWeaponSets())
 
   const handleSaveWeaponSet = () => {
-    const name = window.prompt('Save attacker profile as:', '')
+    const name = window.prompt(t('saveProfileAs', t('attackerProfile')), '')
     if (name === null) return
     const trimmed = name.trim()
     if (!trimmed) {
-      setToast({ kind: 'error', message: 'Name cannot be empty.' })
+      setToast({ kind: 'error', message: t('nameCannotBeEmpty') })
       return
     }
     if (savedWeaponSets.includes(trimmed) && trimmed !== selectedWeaponSet) {
-      if (!window.confirm(`Attacker profile "${trimmed}" already exists. Overwrite?`)) return
+      if (!window.confirm(t('profileExistsConfirm', trimmed))) return
     }
     let ok
     try {
@@ -91,7 +91,7 @@ function AttackSimulator() {
       )
     } catch (err) {
       if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved profiles and try again.' })
+        setToast({ kind: 'error', message: t('profileStorageFull') })
         return
       }
       throw err
@@ -99,7 +99,7 @@ function AttackSimulator() {
     if (ok) {
       refreshWeaponSets()
       setSelectedWeaponSet(trimmed)
-      setToast({ kind: 'success', message: `Saved attacker profile "${trimmed}".` })
+      setToast({ kind: 'success', message: t('profileSaved', t('attackerProfile'), trimmed) })
     }
   }
 
@@ -111,16 +111,16 @@ function AttackSimulator() {
         serializeAttackerProfile({ weapons, unitBuffs })
       )
       if (!ok) {
-        setToast({ kind: 'error', message: 'Browser storage is unavailable.' })
+        setToast({ kind: 'error', message: t('storageUnavailable') })
         return
       }
       setToast({
         kind: 'success',
-        message: `Updated attacker profile "${selectedWeaponSet}".`,
+        message: t('profileUpdated', t('attackerProfile'), selectedWeaponSet),
       })
     } catch (err) {
       if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved profiles and try again.' })
+        setToast({ kind: 'error', message: t('profileStorageFull') })
         return
       }
       throw err
@@ -132,13 +132,13 @@ function AttackSimulator() {
     if (!name) return
     const data = loadNamedWeaponSet(name)
     if (!data || !Array.isArray(data.weapons) || data.weapons.length === 0) {
-      setToast({ kind: 'error', message: `Could not load attacker profile "${name}".` })
+      setToast({ kind: 'error', message: t('profileLoadFailed', t('attackerProfile'), name) })
       return
     }
     for (let i = 0; i < data.weapons.length; i++) {
       const err = validateWeaponShape(data.weapons[i])
       if (err) {
-        setToast({ kind: 'error', message: `Invalid attacker profile: weapons[${i}] ${err}.` })
+        setToast({ kind: 'error', message: t('invalidProfile', t('attackerProfile'), `weapons[${i}] ${err}`) })
         return
       }
     }
@@ -147,21 +147,21 @@ function AttackSimulator() {
     setUnitBuffs(hydrated.unitBuffs)
     setResult(null)
     setError(null)
-    setToast({ kind: 'success', message: `Loaded attacker profile "${name}".` })
+    setToast({ kind: 'success', message: t('profileLoaded', t('attackerProfile'), name) })
   }
 
   const refreshTargetSets = () => setSavedTargetSets(listSavedTargetSets())
 
   const handleSaveTargetSet = () => {
-    const name = window.prompt('Save defender profile as:', '')
+    const name = window.prompt(t('saveProfileAs', t('defenderProfile')), '')
     if (name === null) return
     const trimmed = name.trim()
     if (!trimmed) {
-      setToast({ kind: 'error', message: 'Name cannot be empty.' })
+      setToast({ kind: 'error', message: t('nameCannotBeEmpty') })
       return
     }
     if (savedTargetSets.includes(trimmed) && trimmed !== selectedTargetSet) {
-      if (!window.confirm(`Defender profile "${trimmed}" already exists. Overwrite?`)) return
+      if (!window.confirm(t('profileExistsConfirm', trimmed))) return
     }
     let ok
     try {
@@ -171,7 +171,7 @@ function AttackSimulator() {
       )
     } catch (err) {
       if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved profiles and try again.' })
+        setToast({ kind: 'error', message: t('profileStorageFull') })
         return
       }
       throw err
@@ -179,7 +179,7 @@ function AttackSimulator() {
     if (ok) {
       refreshTargetSets()
       setSelectedTargetSet(trimmed)
-      setToast({ kind: 'success', message: `Saved defender profile "${trimmed}".` })
+      setToast({ kind: 'success', message: t('profileSaved', t('defenderProfile'), trimmed) })
     }
   }
 
@@ -191,16 +191,16 @@ function AttackSimulator() {
         serializeDefenderProfile({ targets, defenderUnitBuffs })
       )
       if (!ok) {
-        setToast({ kind: 'error', message: 'Browser storage is unavailable.' })
+        setToast({ kind: 'error', message: t('storageUnavailable') })
         return
       }
       setToast({
         kind: 'success',
-        message: `Updated defender profile "${selectedTargetSet}".`,
+        message: t('profileUpdated', t('defenderProfile'), selectedTargetSet),
       })
     } catch (err) {
       if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: 'Browser storage is full. Delete some saved profiles and try again.' })
+        setToast({ kind: 'error', message: t('profileStorageFull') })
         return
       }
       throw err
@@ -212,13 +212,13 @@ function AttackSimulator() {
     if (!name) return
     const data = loadNamedTargetSet(name)
     if (!data || !Array.isArray(data.targets) || data.targets.length === 0) {
-      setToast({ kind: 'error', message: `Could not load defender profile "${name}".` })
+      setToast({ kind: 'error', message: t('profileLoadFailed', t('defenderProfile'), name) })
       return
     }
     for (let i = 0; i < data.targets.length; i++) {
       const err = validateTargetShape(data.targets[i])
       if (err) {
-        setToast({ kind: 'error', message: `Invalid defender profile: targets[${i}] ${err}.` })
+        setToast({ kind: 'error', message: t('invalidProfile', t('defenderProfile'), `targets[${i}] ${err}`) })
         return
       }
     }
@@ -227,7 +227,7 @@ function AttackSimulator() {
     setDefenderUnitBuffs(hydrated.defenderUnitBuffs)
     setResult(null)
     setError(null)
-    setToast({ kind: 'success', message: `Loaded defender profile "${name}".` })
+    setToast({ kind: 'success', message: t('profileLoaded', t('defenderProfile'), name) })
   }
 
   const handleRun = (e) => {
@@ -244,7 +244,7 @@ function AttackSimulator() {
       }
     }
     if (targets.length === 0) {
-      setError('Add at least one target profile.')
+      setError(t('needTargetProfile'))
       return
     }
     setRunning(true)
@@ -311,8 +311,8 @@ function AttackSimulator() {
             onUpdate={handleUpdateWeaponSet}
             updateLabel={t('updateProfile')}
             updateDisabled={!selectedWeaponSet}
-            groupAriaLabel="Saved attacker profiles"
-            selectAriaLabel="Load saved attacker profile"
+            groupAriaLabel={t('savedAttackerGroup')}
+            selectAriaLabel={t('loadAttackerProfile')}
           />
 
           <AttackerProfileWorkspace
@@ -338,8 +338,8 @@ function AttackSimulator() {
             onUpdate={handleUpdateTargetSet}
             updateLabel={t('updateProfile')}
             updateDisabled={!selectedTargetSet}
-            groupAriaLabel="Saved defender profiles"
-            selectAriaLabel="Load saved defender profile"
+            groupAriaLabel={t('savedDefenderGroup')}
+            selectAriaLabel={t('loadDefenderProfile')}
           />
 
           <DefenderProfileWorkspace

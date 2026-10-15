@@ -4,6 +4,13 @@ This is the minimum vocabulary to understand variable names in `lib/dice/`
 and the calculator forms. The real rulebook is more nuanced; this is just
 enough for code maintenance.
 
+## UI terminology
+- **Profile / Profiles** is **面板** in the Chinese 40K UI.
+- **Attacker Profile** and **Defender Profile** are **攻击方面板** and
+  **防御方面板**; **Library** is **面板库**.
+- This terminology applies to labels, actions, prompts, and notifications.
+  User-provided Profile names and stored data are not translated.
+
 ## The attack sequence (what we model)
 For each attack:
 1. **Hit roll** — roll a D6, succeed on `BS+` (or `WS+` in melee).

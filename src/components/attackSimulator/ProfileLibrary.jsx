@@ -117,7 +117,7 @@ export default function ProfileLibrary() {
   }, [toast])
 
   const confirmDiscard = () =>
-    !dirty || window.confirm('Discard unsaved Profile changes?')
+    !dirty || window.confirm(t('discardProfileChangesConfirm'))
 
   const refresh = () => {
     const next = api.list()
@@ -128,10 +128,10 @@ export default function ProfileLibrary() {
   const showStorageError = (error) => {
     const message =
       error instanceof StorageQuotaError
-        ? 'Browser storage is full. Delete some saved Profiles and try again.'
+        ? t('profileStorageFull')
         : error instanceof Error
           ? error.message
-          : 'Browser storage is unavailable.'
+          : t('storageUnavailable')
     setToast({ kind: 'error', message })
   }
 
@@ -149,7 +149,7 @@ export default function ProfileLibrary() {
     if (name === selectedName || !confirmDiscard()) return
     const stored = api.load(name)
     if (!stored) {
-      setToast({ kind: 'error', message: `Could not load "${name}".` })
+      setToast({ kind: 'error', message: t('profileLoadFailed', t('thProfile'), name) })
       return
     }
     setSelectedName(name)
@@ -159,29 +159,29 @@ export default function ProfileLibrary() {
 
   const handleNew = () => {
     if (!confirmDiscard()) return
-    const name = window.prompt('New Profile name:')
+    const name = window.prompt(t('newProfileNamePrompt'))
     if (name === null) return
     const trimmed = name.trim()
     if (!trimmed) {
-      setToast({ kind: 'error', message: 'Name cannot be empty.' })
+      setToast({ kind: 'error', message: t('nameCannotBeEmpty') })
       return
     }
     if (
       names.includes(trimmed) &&
-      !window.confirm(`Profile "${trimmed}" already exists. Overwrite?`)
+      !window.confirm(t('profileExistsConfirm', trimmed))
     ) {
       return
     }
     const nextDraft = api.create()
     try {
       if (!api.save(trimmed, api.serialize(nextDraft))) {
-        throw new Error('Browser storage is unavailable.')
+        throw new Error(t('storageUnavailable'))
       }
       refresh()
       setSelectedName(trimmed)
       setDraft(nextDraft)
       setDirty(false)
-      setToast({ kind: 'success', message: `Created "${trimmed}".` })
+      setToast({ kind: 'success', message: t('profileCreated', trimmed) })
     } catch (error) {
       showStorageError(error)
     }
@@ -191,10 +191,10 @@ export default function ProfileLibrary() {
     if (!selectedName || !draft) return
     try {
       if (!api.save(selectedName, api.serialize(draft))) {
-        throw new Error('Browser storage is unavailable.')
+        throw new Error(t('storageUnavailable'))
       }
       setDirty(false)
-      setToast({ kind: 'success', message: `Saved "${selectedName}".` })
+      setToast({ kind: 'success', message: t('profileSaved', t('thProfile'), selectedName) })
     } catch (error) {
       showStorageError(error)
     }
@@ -212,25 +212,25 @@ export default function ProfileLibrary() {
     if (!selectedName || !confirmDiscard()) return
     const stored = api.load(selectedName)
     if (!stored) return
-    const name = window.prompt('Rename Profile:', selectedName)
+    const name = window.prompt(t('renameProfilePrompt'), selectedName)
     if (name === null) return
     const trimmed = name.trim()
     if (!trimmed || trimmed === selectedName) return
     if (
       names.includes(trimmed) &&
-      !window.confirm(`Profile "${trimmed}" already exists. Overwrite?`)
+      !window.confirm(t('profileExistsConfirm', trimmed))
     ) {
       return
     }
     try {
       if (!api.rename(selectedName, trimmed)) {
-        throw new Error('Could not rename the Profile.')
+        throw new Error(t('renameProfileFailed'))
       }
       setSelectedName(trimmed)
       setNames(api.list())
       setDraft(api.hydrate(stored))
       setDirty(false)
-      setToast({ kind: 'success', message: `Renamed to "${trimmed}".` })
+      setToast({ kind: 'success', message: t('profileRenamed', trimmed) })
     } catch (error) {
       showStorageError(error)
     }
@@ -238,25 +238,25 @@ export default function ProfileLibrary() {
 
   const handleDuplicate = () => {
     if (!selectedName || !draft) return
-    const name = window.prompt('Duplicate Profile as:', `${selectedName} copy`)
+    const name = window.prompt(t('duplicateProfilePrompt'), `${selectedName} copy`)
     if (name === null) return
     const trimmed = name.trim()
     if (!trimmed) return
     if (
       names.includes(trimmed) &&
-      !window.confirm(`Profile "${trimmed}" already exists. Overwrite?`)
+      !window.confirm(t('profileExistsConfirm', trimmed))
     ) {
       return
     }
     try {
       if (!api.save(trimmed, api.serialize(draft))) {
-        throw new Error('Browser storage is unavailable.')
+        throw new Error(t('storageUnavailable'))
       }
       setNames(api.list())
       setSelectedName(trimmed)
       setDraft(api.hydrate(api.load(trimmed)))
       setDirty(false)
-      setToast({ kind: 'success', message: `Created "${trimmed}".` })
+      setToast({ kind: 'success', message: t('profileCreated', trimmed) })
     } catch (error) {
       showStorageError(error)
     }
@@ -264,16 +264,16 @@ export default function ProfileLibrary() {
 
   const handleDelete = () => {
     if (!selectedName) return
-    if (!window.confirm(`Delete saved Profile "${selectedName}"?`)) return
+    if (!window.confirm(t('deleteProfileConfirm', selectedName))) return
     try {
       if (!api.remove(selectedName)) {
-        throw new Error('Could not delete the Profile.')
+        throw new Error(t('deleteProfileFailed'))
       }
       setNames(api.list())
       setSelectedName('')
       setDraft(null)
       setDirty(false)
-      setToast({ kind: 'success', message: `Deleted "${selectedName}".` })
+      setToast({ kind: 'success', message: t('profileDeleted', selectedName) })
     } catch (error) {
       showStorageError(error)
     }
@@ -283,17 +283,17 @@ export default function ProfileLibrary() {
     try {
       const profiles = api.getLibrary()
       if (Object.keys(profiles).length === 0) {
-        throw new Error('There are no saved Profiles to export.')
+        throw new Error(t('noProfilesToExport'))
       }
       downloadJson(api.buildExport(profiles), api.filename)
       setToast({
         kind: 'success',
-        message: `Exported ${Object.keys(profiles).length} Profiles.`,
+        message: t('profilesExported', Object.keys(profiles).length),
       })
     } catch (error) {
       setToast({
         kind: 'error',
-        message: `Export failed: ${error.message || 'unknown error'}.`,
+        message: t('exportFailed', error.message || t('unknownError')),
       })
     }
   }
@@ -315,7 +315,7 @@ export default function ProfileLibrary() {
       const importedNames = Object.keys(profiles)
       const updated = importedNames.filter((name) => existing.has(name)).length
       if (!api.mergeLibrary(profiles)) {
-        throw new Error('Browser storage is unavailable.')
+        throw new Error(t('storageUnavailable'))
       }
       setNames(api.list())
       setSelectedName('')
@@ -323,7 +323,7 @@ export default function ProfileLibrary() {
       setDirty(false)
       setToast({
         kind: 'success',
-        message: `Imported ${importedNames.length} Profiles: ${importedNames.length - updated} added, ${updated} updated.`,
+        message: t('profilesImported', importedNames.length, importedNames.length - updated, updated),
       })
     } catch (error) {
       showStorageError(error)
