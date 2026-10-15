@@ -32,6 +32,7 @@ import {
 import { buildAttackSimReport } from '../lib/attackSimReport'
 import { StatCard, StatGrid, DistributionChart } from './ui'
 import SavedSetControls from './ui/SavedSetControls'
+import ProfileNameDialog from './attackSimulator/ProfileNameDialog'
 import { useT } from './attackSim/lang'
 import {
   AttackerProfileWorkspace,
@@ -58,6 +59,7 @@ function AttackSimulator() {
   const [selectedWeaponSet, setSelectedWeaponSet] = useState('')
   const [savedTargetSets, setSavedTargetSets] = useState(() => listSavedTargetSets())
   const [selectedTargetSet, setSelectedTargetSet] = useState('')
+  const [namingSide, setNamingSide] = useState(null)
 
   useEffect(() => {
     if (!toast) return
@@ -72,35 +74,13 @@ function AttackSimulator() {
 
   const refreshWeaponSets = () => setSavedWeaponSets(listSavedWeaponSets())
 
-  const handleSaveWeaponSet = () => {
-    const name = window.prompt(t('saveProfileAs', t('attackerProfile')), '')
-    if (name === null) return
-    const trimmed = name.trim()
-    if (!trimmed) {
-      setToast({ kind: 'error', message: t('nameCannotBeEmpty') })
-      return
+  const handleSaveWeaponSet = (name) => {
+    if (!saveNamedWeaponSet(name, serializeAttackerProfile({ weapons, unitBuffs }))) {
+      throw new Error(t('storageUnavailable'))
     }
-    if (savedWeaponSets.includes(trimmed) && trimmed !== selectedWeaponSet) {
-      if (!window.confirm(t('profileExistsConfirm', trimmed))) return
-    }
-    let ok
-    try {
-      ok = saveNamedWeaponSet(
-        trimmed,
-        serializeAttackerProfile({ weapons, unitBuffs })
-      )
-    } catch (err) {
-      if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: t('profileStorageFull') })
-        return
-      }
-      throw err
-    }
-    if (ok) {
-      refreshWeaponSets()
-      setSelectedWeaponSet(trimmed)
-      setToast({ kind: 'success', message: t('profileSaved', t('attackerProfile'), trimmed) })
-    }
+    refreshWeaponSets()
+    setSelectedWeaponSet(name)
+    setToast({ kind: 'success', message: t('profileSaved', t('attackerProfile'), name) })
   }
 
   const handleUpdateWeaponSet = () => {
@@ -152,35 +132,13 @@ function AttackSimulator() {
 
   const refreshTargetSets = () => setSavedTargetSets(listSavedTargetSets())
 
-  const handleSaveTargetSet = () => {
-    const name = window.prompt(t('saveProfileAs', t('defenderProfile')), '')
-    if (name === null) return
-    const trimmed = name.trim()
-    if (!trimmed) {
-      setToast({ kind: 'error', message: t('nameCannotBeEmpty') })
-      return
+  const handleSaveTargetSet = (name) => {
+    if (!saveNamedTargetSet(name, serializeDefenderProfile({ targets, defenderUnitBuffs }))) {
+      throw new Error(t('storageUnavailable'))
     }
-    if (savedTargetSets.includes(trimmed) && trimmed !== selectedTargetSet) {
-      if (!window.confirm(t('profileExistsConfirm', trimmed))) return
-    }
-    let ok
-    try {
-      ok = saveNamedTargetSet(
-        trimmed,
-        serializeDefenderProfile({ targets, defenderUnitBuffs })
-      )
-    } catch (err) {
-      if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: t('profileStorageFull') })
-        return
-      }
-      throw err
-    }
-    if (ok) {
-      refreshTargetSets()
-      setSelectedTargetSet(trimmed)
-      setToast({ kind: 'success', message: t('profileSaved', t('defenderProfile'), trimmed) })
-    }
+    refreshTargetSets()
+    setSelectedTargetSet(name)
+    setToast({ kind: 'success', message: t('profileSaved', t('defenderProfile'), name) })
   }
 
   const handleUpdateTargetSet = () => {
@@ -296,6 +254,17 @@ function AttackSimulator() {
         </div>
       )}
 
+      {namingSide && (
+        <ProfileNameDialog
+          title={t('saveProfileAs', t(namingSide === 'attacker' ? 'attackerProfile' : 'defenderProfile'))}
+          existingNames={namingSide === 'attacker' ? savedWeaponSets : savedTargetSets}
+          replaceName={namingSide === 'attacker' ? selectedWeaponSet : selectedTargetSet}
+          submitLabel={t('saveProfileAction')}
+          onSubmit={namingSide === 'attacker' ? handleSaveWeaponSet : handleSaveTargetSet}
+          onClose={() => setNamingSide(null)}
+        />
+      )}
+
       <form onSubmit={handleRun} className="attack-sim-form">
         <section className="attack-sim-section">
           <header className="attack-sim-section-header">
@@ -306,7 +275,7 @@ function AttackSimulator() {
             options={savedWeaponSets}
             placeholder={t('savedAttackerSets')}
             onChange={handleLoadWeaponSet}
-            onSave={handleSaveWeaponSet}
+            onSave={() => setNamingSide('attacker')}
             saveLabel={t('saveProfile')}
             onUpdate={handleUpdateWeaponSet}
             updateLabel={t('updateProfile')}
@@ -333,7 +302,7 @@ function AttackSimulator() {
             options={savedTargetSets}
             placeholder={t('savedDefenderSets')}
             onChange={handleLoadTargetSet}
-            onSave={handleSaveTargetSet}
+            onSave={() => setNamingSide('defender')}
             saveLabel={t('saveProfile')}
             onUpdate={handleUpdateTargetSet}
             updateLabel={t('updateProfile')}

@@ -42,6 +42,7 @@ import {
 } from '../../lib/attackSimProfiles'
 import { Tabs } from '../ui'
 import { useT } from '../attackSim/lang'
+import ProfileNameDialog from './ProfileNameDialog'
 import {
   AttackerProfileWorkspace,
   DefenderProfileWorkspace,
@@ -107,6 +108,7 @@ export default function ProfileLibrary() {
   const [dirty, setDirty] = useState(false)
   const [query, setQuery] = useState('')
   const [toast, setToast] = useState(null)
+  const [nameAction, setNameAction] = useState(null)
   const fileInputRef = useRef(null)
   const api = sideApis[side]
 
@@ -157,34 +159,21 @@ export default function ProfileLibrary() {
     setDirty(false)
   }
 
-  const handleNew = () => {
-    if (!confirmDiscard()) return
-    const name = window.prompt(t('newProfileNamePrompt'))
-    if (name === null) return
-    const trimmed = name.trim()
-    if (!trimmed) {
-      setToast({ kind: 'error', message: t('nameCannotBeEmpty') })
-      return
-    }
-    if (
-      names.includes(trimmed) &&
-      !window.confirm(t('profileExistsConfirm', trimmed))
-    ) {
-      return
-    }
+  const openNameDialog = (action) => {
+    if (action !== 'duplicate' && !confirmDiscard()) return
+    setNameAction(action)
+  }
+
+  const handleNew = (name) => {
     const nextDraft = api.create()
-    try {
-      if (!api.save(trimmed, api.serialize(nextDraft))) {
-        throw new Error(t('storageUnavailable'))
-      }
-      refresh()
-      setSelectedName(trimmed)
-      setDraft(nextDraft)
-      setDirty(false)
-      setToast({ kind: 'success', message: t('profileCreated', trimmed) })
-    } catch (error) {
-      showStorageError(error)
+    if (!api.save(name, api.serialize(nextDraft))) {
+      throw new Error(t('storageUnavailable'))
     }
+    refresh()
+    setSelectedName(name)
+    setDraft(nextDraft)
+    setDirty(false)
+    setToast({ kind: 'success', message: t('profileCreated', name) })
   }
 
   const handleSave = () => {
@@ -208,58 +197,28 @@ export default function ProfileLibrary() {
     setDirty(false)
   }
 
-  const handleRename = () => {
-    if (!selectedName || !confirmDiscard()) return
+  const handleRename = (name) => {
+    if (name === selectedName) return
     const stored = api.load(selectedName)
-    if (!stored) return
-    const name = window.prompt(t('renameProfilePrompt'), selectedName)
-    if (name === null) return
-    const trimmed = name.trim()
-    if (!trimmed || trimmed === selectedName) return
-    if (
-      names.includes(trimmed) &&
-      !window.confirm(t('profileExistsConfirm', trimmed))
-    ) {
-      return
+    if (!stored || !api.rename(selectedName, name)) {
+      throw new Error(t('renameProfileFailed'))
     }
-    try {
-      if (!api.rename(selectedName, trimmed)) {
-        throw new Error(t('renameProfileFailed'))
-      }
-      setSelectedName(trimmed)
-      setNames(api.list())
-      setDraft(api.hydrate(stored))
-      setDirty(false)
-      setToast({ kind: 'success', message: t('profileRenamed', trimmed) })
-    } catch (error) {
-      showStorageError(error)
-    }
+    setSelectedName(name)
+    setNames(api.list())
+    setDraft(api.hydrate(stored))
+    setDirty(false)
+    setToast({ kind: 'success', message: t('profileRenamed', name) })
   }
 
-  const handleDuplicate = () => {
-    if (!selectedName || !draft) return
-    const name = window.prompt(t('duplicateProfilePrompt'), `${selectedName} copy`)
-    if (name === null) return
-    const trimmed = name.trim()
-    if (!trimmed) return
-    if (
-      names.includes(trimmed) &&
-      !window.confirm(t('profileExistsConfirm', trimmed))
-    ) {
-      return
+  const handleDuplicate = (name) => {
+    if (!api.save(name, api.serialize(draft))) {
+      throw new Error(t('storageUnavailable'))
     }
-    try {
-      if (!api.save(trimmed, api.serialize(draft))) {
-        throw new Error(t('storageUnavailable'))
-      }
-      setNames(api.list())
-      setSelectedName(trimmed)
-      setDraft(api.hydrate(api.load(trimmed)))
-      setDirty(false)
-      setToast({ kind: 'success', message: t('profileCreated', trimmed) })
-    } catch (error) {
-      showStorageError(error)
-    }
+    setNames(api.list())
+    setSelectedName(name)
+    setDraft(api.hydrate(api.load(name)))
+    setDirty(false)
+    setToast({ kind: 'success', message: t('profileCreated', name) })
   }
 
   const handleDelete = () => {
@@ -339,7 +298,7 @@ export default function ProfileLibrary() {
       <header className="attack-sim-section-header profile-page-heading">
         <h2>{t('profileLibrary')}</h2>
         <div className="profile-library-toolbar">
-          <button type="button" className="toolbar-button" onClick={handleNew}>
+          <button type="button" className="toolbar-button" onClick={() => openNameDialog('new')}>
             <Plus size={14} />
             <span>{t('newProfile')}</span>
           </button>
@@ -386,6 +345,18 @@ export default function ProfileLibrary() {
             {toast.message}
           </span>
         </div>
+      )}
+
+      {nameAction && (
+        <ProfileNameDialog
+          title={t(nameAction === 'new' ? 'newProfile' : nameAction === 'rename' ? 'renameProfile' : 'duplicateProfile')}
+          initialName={nameAction === 'new' ? '' : nameAction === 'rename' ? selectedName : `${selectedName} copy`}
+          existingNames={names}
+          replaceName={nameAction === 'rename' ? selectedName : ''}
+          submitLabel={t(nameAction === 'new' ? 'createProfileAction' : nameAction === 'rename' ? 'renameProfile' : 'duplicateProfile')}
+          onSubmit={nameAction === 'new' ? handleNew : nameAction === 'rename' ? handleRename : handleDuplicate}
+          onClose={() => setNameAction(null)}
+        />
       )}
 
       <div className="profile-library-layout">
@@ -458,11 +429,11 @@ export default function ProfileLibrary() {
                     <RotateCcw size={14} />
                     <span>{t('discardChanges')}</span>
                   </button>
-                  <button type="button" className="toolbar-button" onClick={handleRename}>
+                  <button type="button" className="toolbar-button" onClick={() => openNameDialog('rename')}>
                     <Pencil size={14} />
                     <span>{t('renameProfile')}</span>
                   </button>
-                  <button type="button" className="toolbar-button" onClick={handleDuplicate}>
+                  <button type="button" className="toolbar-button" onClick={() => openNameDialog('duplicate')}>
                     <Copy size={14} />
                     <span>{t('duplicateProfile')}</span>
                   </button>

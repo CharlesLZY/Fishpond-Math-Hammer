@@ -10,6 +10,7 @@ import {
   renameNamedWeaponSet,
   saveNamedTargetSet,
   saveNamedWeaponSet,
+  StorageQuotaError,
 } from '../attackSimStorage'
 
 const weaponPayload = (strength) => ({
@@ -100,5 +101,24 @@ describe.each(sides)('$name Profile library imports', (side) => {
     expect(side.load('Original')).toBeNull()
     expect(side.load('Renamed')).toEqual(side.payload(4))
     expect(side.load('Unchanged')).toEqual(side.payload(5))
+  })
+
+  it('reports unavailable storage without creating a saved Profile', () => {
+    localStorage.setItem = () => {
+      throw new DOMException('Storage disabled', 'SecurityError')
+    }
+
+    expect(side.save('Blocked', side.payload(4))).toBe(false)
+    expect(side.list()).toEqual([])
+  })
+
+  it('reports a quota error without replacing an existing Profile', () => {
+    side.save('Existing', side.payload(4))
+    localStorage.setItem = () => {
+      throw new DOMException('Storage full', 'QuotaExceededError')
+    }
+
+    expect(() => side.save('Existing', side.payload(5))).toThrow(StorageQuotaError)
+    expect(side.load('Existing')).toEqual(side.payload(4))
   })
 })

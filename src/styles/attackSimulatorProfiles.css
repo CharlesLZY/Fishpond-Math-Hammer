@@ -305,6 +305,46 @@
   background: #f7c25e;
 }
 
+.weapon-buffs-dialog.profile-name-dialog {
+  align-self: center;
+  width: calc(100% - 24px);
+  max-width: 480px;
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+
+.profile-name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-name-form label {
+  color: #ddd;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-name-form input {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+
+.profile-name-form input[aria-invalid="true"] {
+  border-color: #ef4444;
+}
+
+.profile-name-warning {
+  padding: 10px 12px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 6px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 560px) {
   .weapon-buffs-dialog-backdrop {
     padding: 0;

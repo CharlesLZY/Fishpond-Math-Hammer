@@ -171,6 +171,11 @@ Each side exports and imports independently. An import merges the file into
 the existing library and overwrites same-name Profiles without prompting;
 unrelated locally saved Profiles remain intact.
 
+Profile save, create, rename, and duplicate actions use `ProfileNameDialog`
+instead of browser-native prompts. The dialog validates names and confirms
+overwrites in-page. A failed storage write keeps the dialog and entered name
+open and displays the error; successful writes refresh the saved-name list.
+
 ### Why `localStorage` (and not IndexedDB)
 The data is small and the API needs to be **synchronous** so React's lazy
 `useState` initializers can read it during the first render with no

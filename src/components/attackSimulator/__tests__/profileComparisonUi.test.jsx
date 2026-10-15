@@ -29,9 +29,9 @@ function ProfileMessages() {
       <li>{t('saveProfileAs', t('attackerProfile'))}</li>
       <li>{t('profileSaved', t('defenderProfile'), 'User Profile')}</li>
       <li>{t('profileExistsConfirm', 'User Profile')}</li>
-      <li>{t('newProfileNamePrompt')}</li>
-      <li>{t('renameProfilePrompt')}</li>
-      <li>{t('duplicateProfilePrompt')}</li>
+      <li>{t('newProfile')}</li>
+      <li>{t('renameProfile')}</li>
+      <li>{t('duplicateProfile')}</li>
       <li>{t('discardProfileChangesConfirm')}</li>
       <li>{t('deleteProfileConfirm', 'User Profile')}</li>
       <li>{t('profilesExported', 2)}</li>
@@ -92,9 +92,9 @@ describe('Profile comparison presentation', () => {
       '保存攻击方面板，请输入名称：',
       '已保存防御方面板“User Profile”。',
       '面板“User Profile”已存在，是否覆盖？',
-      '请输入新面板的名称：',
-      '重命名面板：',
-      '复制面板，请输入名称：',
+      '新建面板',
+      '重命名',
+      '复制',
       '放弃尚未保存的面板修改？',
       '删除已保存的面板“User Profile”？',
       '已导出 2 个面板。',
