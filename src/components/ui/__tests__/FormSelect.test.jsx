@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import FormSelect from '../FormSelect'
 import SavedSetControls from '../SavedSetControls'
-import { selectStyles } from '../selectStyles'
+import { buffSelectStyles, selectStyles } from '../selectStyles'
 
 const options = Array.from({ length: 80 }, (_, index) => ({
   value: `profile-${index + 1}`,
@@ -10,12 +10,12 @@ const options = Array.from({ length: 80 }, (_, index) => ({
 }))
 
 describe('shared dropdown menus', () => {
-  it('bounds a long menu at 240px without dropping any selectable entries', () => {
+  it('bounds a long menu by eight rows without dropping any selectable entries', () => {
     const html = renderToStaticMarkup(
       <FormSelect options={options} menuIsOpen instanceId="bounded-menu" />
     )
 
-    expect(html).toContain('max-height:240px')
+    expect(html).toContain('calc(8 * max(var(--select-option-height, 0px), calc(1lh + 16px)))')
     expect(html).toContain('overflow-y:auto')
     expect(html).toContain('overscroll-behavior-y:contain')
     expect(html).toContain('touch-action:pan-y')
@@ -23,30 +23,45 @@ describe('shared dropdown menus', () => {
     expect(html).toContain('>Profile 80</div>')
   })
 
-  it('uses automatic placement while allowing caller-specific menu configuration', () => {
-    const defaults = FormSelect({ options })
-    expect(defaults.props.menuPlacement).toBe('auto')
-    expect(defaults.props.maxMenuHeight).toBe(240)
-    expect(defaults.props.isSearchable).toBe(false)
-
-    const custom = FormSelect({
-      options,
-      maxMenuHeight: 160,
-      menuPlacement: 'top',
-      isSearchable: true,
-    })
-    expect(custom.props.menuPlacement).toBe('top')
-    expect(custom.props.maxMenuHeight).toBe(160)
-    expect(custom.props.isSearchable).toBe(true)
+  it('honors explicit placement and a tighter height cap without losing the row limit', () => {
+    const html = renderToStaticMarkup(
+      <FormSelect
+        options={options}
+        menuIsOpen
+        maxMenuHeight={160}
+        menuPlacement="top"
+        isSearchable
+      />
+    )
+    expect(html).toContain('bottom:100%')
+    expect(html).toContain('max-height:min(152px, calc(8 *')
+    expect(html).not.toContain('aria-readonly="true"')
   })
 
   it('preserves the calculated menu limit and scroll behavior in shared styles', () => {
-    expect(selectStyles.menuList({ maxHeight: 180, overflowY: 'auto' })).toMatchObject({
-      maxHeight: 180,
+    const styles = selectStyles.menuList(
+      { maxHeight: 180, overflowY: 'auto', paddingTop: 4, paddingBottom: 4 },
+      { theme: { spacing: { baseUnit: 4 } } }
+    )
+    expect(styles).toMatchObject({
+      maxHeight: 'min(172px, calc(8 * max(var(--select-option-height, 0px), calc(1lh + 16px))))',
+      paddingTop: 0,
+      paddingBottom: 0,
       overflowY: 'auto',
       overscrollBehaviorY: 'contain',
       touchAction: 'pan-y',
     })
+  })
+
+  it('uses compact options actual typography and padding for their eight-row limit', () => {
+    const styles = buffSelectStyles.menuList(
+      { maxHeight: 800, paddingTop: 4, paddingBottom: 4 },
+      { theme: { spacing: { baseUnit: 4 } } }
+    )
+    expect(styles.maxHeight).toBe(
+      'min(792px, calc(8 * max(var(--select-option-height, 0px), calc(1lh + 8px))))'
+    )
+    expect(styles.fontSize).toBe('var(--select-font-size, 13px)')
   })
 })
 

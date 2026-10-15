@@ -46,7 +46,8 @@ belongs in that page's stylesheet.
 - Slot colors stay attached to their attacker when other slots are removed
   or results are ranked.
 - Simulator and Comparison use the shared `FormSelect` for saved Profiles.
-  Menus are capped at 240px, automatically open above/below as space allows,
+  Menus are capped at 8 rows (based on current typography, padding, and
+  touch-target height), automatically open above/below as space allows,
   and scroll vertically with contained wheel/touch scrolling. Long option
   labels wrap instead of widening the page; selected labels remain compact.
 - At 768px and below, the comparison table becomes labeled, stacked result

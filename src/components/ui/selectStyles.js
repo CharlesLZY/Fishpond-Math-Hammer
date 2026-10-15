@@ -2,6 +2,25 @@
 // Centralizes the dark theme + amber-accent look used by every form select.
 //
 const CONTROL_HEIGHT = 'var(--form-control-height, 34px)'
+const MAX_MENU_ROWS = 8
+const COMPACT_OPTION_PADDING = 4
+
+const menuListStyles = (baseStyles, state, compact = false) => {
+  const optionPadding = compact ? COMPACT_OPTION_PADDING : state.theme.spacing.baseUnit * 2
+  const menuPadding = (baseStyles.paddingTop ?? 0) + (baseStyles.paddingBottom ?? 0)
+  // One row uses the option's line height and padding, or its larger touch-target minimum.
+  const rowHeight = `max(var(--select-option-height, 0px), calc(1lh + ${optionPadding * 2}px))`
+  return {
+    ...baseStyles,
+    maxHeight: `min(${Math.max(0, baseStyles.maxHeight - menuPadding)}px, calc(${MAX_MENU_ROWS} * ${rowHeight}))`,
+    paddingTop: 0,
+    paddingBottom: 0,
+    fontSize: compact ? 'var(--select-font-size, 13px)' : 'var(--select-font-size, inherit)',
+    backgroundColor: '#2a2a2a',
+    overscrollBehaviorY: 'contain',
+    touchAction: 'pan-y'
+  }
+}
 
 export const selectStyles = {
   control: (baseStyles, state) => ({
@@ -26,16 +45,14 @@ export const selectStyles = {
     color: '#d0d0d0',
     fontSize: 'var(--select-font-size, inherit)'
   }),
-  menu: (baseStyles) => ({
+  menu: (baseStyles, state) => ({
     ...baseStyles,
+    paddingTop: state.theme.spacing.baseUnit,
+    paddingBottom: state.theme.spacing.baseUnit,
+    backgroundColor: '#2a2a2a',
     zIndex: 20
   }),
-  menuList: (baseStyles) => ({
-    ...baseStyles,
-    backgroundColor: '#2a2a2a',
-    overscrollBehaviorY: 'contain',
-    touchAction: 'pan-y'
-  }),
+  menuList: (baseStyles, state) => menuListStyles(baseStyles, state),
   option: (baseStyles, state) => ({
     ...baseStyles,
     backgroundColor: state.isFocused ? '#3a3a3a' : '#2a2a2a',
@@ -72,6 +89,7 @@ export const selectStyles = {
 // Compact variant used for small inline buff selects (ANTI, FNP).
 export const buffSelectStyles = {
   ...selectStyles,
+  menuList: (baseStyles, state) => menuListStyles(baseStyles, state, true),
   container: (baseStyles) => ({
     ...baseStyles,
     width: '70px'
@@ -96,7 +114,7 @@ export const buffSelectStyles = {
   option: (baseStyles, state) => ({
     ...selectStyles.option(baseStyles, state),
     fontSize: 'var(--select-font-size, 13px)',
-    padding: '4px 8px'
+    padding: `${COMPACT_OPTION_PADDING}px 8px`
   }),
   dropdownIndicator: (baseStyles) => ({
     ...selectStyles.dropdownIndicator(baseStyles),

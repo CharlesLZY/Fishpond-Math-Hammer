@@ -1,28 +1,39 @@
+import { useSyncExternalStore } from 'react'
 import Select from 'react-select'
 import { selectStyles, buffSelectStyles } from './selectStyles'
 
-// Thin wrapper around react-select that applies the app's shared styles
-// and sensible defaults (no search box, consistent indicator look).
-//
-// Props:
-//   variant: 'default' | 'buff'
-//            buff = compact inline style
-//   ...rest: any react-select prop (options, value, onChange, etc.)
+const subscribeToViewport = (onChange) => {
+  window.addEventListener('resize', onChange)
+  window.visualViewport?.addEventListener('resize', onChange)
+  return () => {
+    window.removeEventListener('resize', onChange)
+    window.visualViewport?.removeEventListener('resize', onChange)
+  }
+}
+
+const getViewportHeight = () => window.visualViewport?.height ?? window.innerHeight
+const getServerViewportHeight = () => 0
+
 function FormSelect({
   variant = 'default',
   styles,
   isSearchable = false,
-  maxMenuHeight = 240,
+  maxMenuHeight,
   menuPlacement = 'auto',
   ...rest
 }) {
+  const viewportHeight = useSyncExternalStore(
+    subscribeToViewport,
+    getViewportHeight,
+    getServerViewportHeight
+  )
   const baseStyles = variant === 'buff' ? buffSelectStyles : selectStyles
 
   return (
     <Select
       styles={styles ?? baseStyles}
       isSearchable={isSearchable}
-      maxMenuHeight={maxMenuHeight}
+      maxMenuHeight={maxMenuHeight ?? viewportHeight}
       menuPlacement={menuPlacement}
       {...rest}
     />

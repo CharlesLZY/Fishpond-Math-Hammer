@@ -99,9 +99,11 @@ Thin react-select wrapper with the dark theme baked in.
 />
 ```
 `isSearchable` defaults to `false` (we never want the keyboard popup on a 5-item list).
-Menus default to `maxMenuHeight={240}` and `menuPlacement="auto"`. Long
-lists scroll internally using wheel, scrollbar, or touch gestures; these
-defaults can be overridden through normal react-select props. Simulator
+Menus show at most **8 option rows**, using the current option line height,
+padding, and responsive minimum row height. Wrapped labels can occupy more
+than one row's space. `menuPlacement="auto"` and the available viewport
+may constrain the menu further; a caller can supply a tighter
+`maxMenuHeight`. Long lists scroll internally using wheel, scrollbar, or touch gestures. Simulator
 and Comparison Profile selectors use this same component as Hit Reroll,
 with a clear action to remove the current selection.
 
