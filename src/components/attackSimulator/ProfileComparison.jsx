@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, X } from 'lucide-react'
+import { Lock, Plus, RotateCcw, X } from 'lucide-react'
 import {
   getSavedTargetSetLibrary,
   getSavedWeaponSetLibrary,
 } from '../../lib/attackSimStorage'
 import { compareAttackerProfiles } from '../../lib/attackSimComparison'
 import { TACTICAL_LINE_COLORS } from '../../lib/colors'
-import { makeTargetUnitBuffs, makeUnitBuffs } from '../../lib/dice'
+import {
+  isTargetUnitBuffsEmpty,
+  isUnitBuffsEmpty,
+  makeTargetUnitBuffs,
+  makeUnitBuffs,
+  mergeTargetUnitBuffs,
+  mergeUnitBuffs,
+} from '../../lib/dice'
 import { useT } from '../attackSim/lang'
 import DefenderUnitBuffsPanel from './DefenderUnitBuffsPanel'
 import UnitBuffsPanel from './UnitBuffsPanel'
@@ -17,6 +24,29 @@ import {
 } from './ProfilePreview'
 
 const attackerColors = TACTICAL_LINE_COLORS.slice(0, 4).map(({ value }) => value)
+
+function AdditionalUnitBuffs({ children, disabled, empty, onReset }) {
+  const { t } = useT()
+  return (
+    <details className="comparison-unit-buffs">
+      <summary>{t('additionalUnitBuffs')}</summary>
+      <fieldset disabled={disabled} aria-label={t('additionalUnitBuffs')}>
+        {children}
+        <div className="comparison-extra-actions">
+          <button
+            type="button"
+            className="toolbar-button"
+            onClick={onReset}
+            disabled={disabled || empty}
+          >
+            <RotateCcw size={14} />
+            {t('clearAdditionalBuffs')}
+          </button>
+        </div>
+      </fieldset>
+    </details>
+  )
+}
 
 export default function ProfileComparison() {
   const { t } = useT()
@@ -29,12 +59,12 @@ export default function ProfileComparison() {
     a.localeCompare(b)
   )
   const [defenderName, setDefenderName] = useState('')
-  const [defenderUnitBuffs, setDefenderUnitBuffs] = useState(() => makeTargetUnitBuffs())
+  const [defenderExtraBuffs, setDefenderExtraBuffs] = useState(() => makeTargetUnitBuffs())
   const [attackerSlots, setAttackerSlots] = useState(() =>
     attackerColors.slice(0, 2).map((color) => ({
       name: '',
       color,
-      unitBuffs: makeUnitBuffs(),
+      extraUnitBuffs: makeUnitBuffs(),
     }))
   )
   const [highPrecision, setHighPrecision] = useState(false)
@@ -42,16 +72,24 @@ export default function ProfileComparison() {
   const [error, setError] = useState(null)
   const [results, setResults] = useState(null)
 
-  const configuredAttackers = attackerSlots.map((slot, index) => ({
-    ...slot,
-    slotNumber: index + 1,
-    profile: slot.name
-      ? { ...attackerLibrary[slot.name], unitBuffs: slot.unitBuffs }
-      : null,
-  }))
+  const configuredAttackers = attackerSlots.map((slot, index) => {
+    const unitBuffs = mergeUnitBuffs(
+      attackerLibrary[slot.name]?.unitBuffs,
+      slot.extraUnitBuffs
+    )
+    return {
+      ...slot,
+      slotNumber: index + 1,
+      profile: slot.name ? { ...attackerLibrary[slot.name], unitBuffs } : null,
+    }
+  })
   const selectedAttackers = configuredAttackers.filter(({ name }) => name)
+  const resolvedDefenderBuffs = mergeTargetUnitBuffs(
+    defenderLibrary[defenderName]?.defenderUnitBuffs,
+    defenderExtraBuffs
+  )
   const configuredDefender = defenderName
-    ? { ...defenderLibrary[defenderName], defenderUnitBuffs }
+    ? { ...defenderLibrary[defenderName], defenderUnitBuffs: resolvedDefenderBuffs }
     : null
 
   const invalidate = () => {
@@ -60,22 +98,27 @@ export default function ProfileComparison() {
   }
 
   const updateAttacker = (color, name) => {
-    const unitBuffs = makeUnitBuffs(attackerLibrary[name]?.unitBuffs || {})
     setAttackerSlots((current) =>
       current.map((slot) =>
-        slot.color === color ? { ...slot, name, unitBuffs } : slot
+        slot.color === color ? { ...slot, name, extraUnitBuffs: makeUnitBuffs() } : slot
       )
     )
     invalidate()
   }
 
-  const updateAttackerUnitBuffs = (color, unitBuffs) => {
+  const updateAttackerExtraBuffs = (color, extraUnitBuffs) => {
     if (running) return
     setAttackerSlots((current) =>
       current.map((slot) =>
-        slot.color === color ? { ...slot, unitBuffs } : slot
+        slot.color === color ? { ...slot, extraUnitBuffs } : slot
       )
     )
+    invalidate()
+  }
+
+  const updateDefenderExtraBuffs = (extraBuffs) => {
+    if (running) return
+    setDefenderExtraBuffs(extraBuffs)
     invalidate()
   }
 
@@ -86,7 +129,7 @@ export default function ProfileComparison() {
     )
     setAttackerSlots((current) => [
       ...current,
-      { name: '', color, unitBuffs: makeUnitBuffs() },
+      { name: '', color, extraUnitBuffs: makeUnitBuffs() },
     ])
     invalidate()
   }
@@ -150,6 +193,17 @@ export default function ProfileComparison() {
         </Link>
       </header>
 
+      <div className="comparison-buff-legend" role="group" aria-label={t('comparisonBuffSources')}>
+        <span className="summary-chip comparison-buff--saved">
+          <Lock size={12} aria-hidden="true" />
+          {t('comparisonSavedBuffs')}
+        </span>
+        <span className="summary-chip comparison-buff--added">
+          <Plus size={12} aria-hidden="true" />
+          {t('comparisonAddedBuffs')}
+        </span>
+      </div>
+
       {(attackerNames.length === 0 || defenderNames.length === 0) && (
         <div className="profile-comparison-empty">
           <strong>{t('comparisonNeedsProfiles')}</strong>
@@ -169,9 +223,7 @@ export default function ProfileComparison() {
           onChange={(event) => {
             const name = event.target.value
             setDefenderName(name)
-            setDefenderUnitBuffs(
-              makeTargetUnitBuffs(defenderLibrary[name]?.defenderUnitBuffs || {})
-            )
+            setDefenderExtraBuffs(makeTargetUnitBuffs())
             invalidate()
           }}
         >
@@ -184,24 +236,26 @@ export default function ProfileComparison() {
         </select>
         {configuredDefender && (
           <>
-            <details className="comparison-unit-buffs">
-              <summary>{t('unitBuffsSection')}</summary>
-              <fieldset disabled={running} aria-label={t('unitBuffsSection')}>
-                <DefenderUnitBuffsPanel
-                  value={defenderUnitBuffs}
-                  onChange={(next) => {
-                    if (running) return
-                    setDefenderUnitBuffs(next)
-                    invalidate()
-                  }}
-                />
-              </fieldset>
-            </details>
             <DefenderProfilePreview
               key={defenderName}
               name={defenderName}
               profile={configuredDefender}
+              savedProfile={defenderLibrary[defenderName]}
+              extraUnitBuffs={defenderExtraBuffs}
             />
+            <AdditionalUnitBuffs
+              disabled={running}
+              empty={isTargetUnitBuffsEmpty(defenderExtraBuffs)}
+              onReset={() => updateDefenderExtraBuffs(makeTargetUnitBuffs())}
+            >
+              <DefenderUnitBuffsPanel
+                key={defenderName}
+                value={defenderExtraBuffs}
+                onChange={updateDefenderExtraBuffs}
+                disabled={running}
+                additional
+              />
+            </AdditionalUnitBuffs>
           </>
         )}
       </section>
@@ -212,7 +266,7 @@ export default function ProfileComparison() {
           <span>{attackerSlots.length} / {attackerColors.length}</span>
         </header>
         <div className="comparison-attacker-grid">
-          {configuredAttackers.map(({ name, color, profile, unitBuffs, slotNumber }) => (
+          {configuredAttackers.map(({ name, color, profile, extraUnitBuffs, slotNumber }) => (
             <div
               className="comparison-attacker-slot"
               key={color}
@@ -261,21 +315,26 @@ export default function ProfileComparison() {
               </div>
               {profile ? (
                 <>
-                  <details className="comparison-unit-buffs">
-                    <summary>{t('unitBuffsSection')}</summary>
-                    <fieldset disabled={running} aria-label={t('unitBuffsSection')}>
-                      <UnitBuffsPanel
-                        value={unitBuffs}
-                        onChange={(next) => updateAttackerUnitBuffs(color, next)}
-                        disabled={running}
-                      />
-                    </fieldset>
-                  </details>
                   <AttackerProfilePreview
                     key={name}
                     name={name}
                     profile={profile}
+                    savedProfile={attackerLibrary[name]}
+                    extraUnitBuffs={extraUnitBuffs}
                   />
+                  <AdditionalUnitBuffs
+                    disabled={running}
+                    empty={isUnitBuffsEmpty(extraUnitBuffs)}
+                    onReset={() => updateAttackerExtraBuffs(color, makeUnitBuffs())}
+                  >
+                    <UnitBuffsPanel
+                      key={name}
+                      value={extraUnitBuffs}
+                      onChange={(next) => updateAttackerExtraBuffs(color, next)}
+                      disabled={running}
+                      additional
+                    />
+                  </AdditionalUnitBuffs>
                 </>
               ) : (
                 <div className="comparison-slot-empty">

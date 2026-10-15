@@ -12,6 +12,7 @@ function BuffChipValueInput({ buff }) {
   const [isInvalid, setIsInvalid] = useState(false)
 
   const commitDraft = () => {
+    if (buff.disabled) return
     const matchedOption = findMatchingValue(draftValue, buff.valueOptions)
     if (!matchedOption) {
       setIsInvalid(true)
@@ -32,6 +33,7 @@ function BuffChipValueInput({ buff }) {
         type="text"
         className={`buff-chip-input ${isInvalid ? 'invalid' : ''}`}
         value={draftValue}
+        disabled={buff.disabled}
         maxLength={2}
         inputMode="text"
         autoCapitalize="characters"
@@ -40,6 +42,7 @@ function BuffChipValueInput({ buff }) {
         aria-label={`${buff.label} value`}
         title={getAllowedValuesLabel(buff)}
         onChange={(e) => {
+          if (buff.disabled) return
           const nextValue = sanitizeDraftValue(e.target.value)
           setDraftValue(nextValue)
           setIsInvalid(!findMatchingValue(nextValue, buff.valueOptions))
@@ -88,12 +91,14 @@ function BuffChipGroup({ buffs }) {
         return (
           <div
             key={b.key}
-            className={`buff-chip ${b.active ? 'active' : ''} ${hasValue ? 'with-value' : ''}`}
+            className={['buff-chip', b.active && 'active', hasValue && 'with-value', b.className].filter(Boolean).join(' ')}
           >
             <button
               type="button"
               className="buff-chip-toggle"
               onClick={b.onToggle}
+              disabled={b.disabled}
+              aria-pressed={!!b.active}
             >
               {b.label}
             </button>

@@ -100,6 +100,29 @@ const bestSustained = (a, b) => {
   return rb > ra ? b : a
 }
 
+export const mergeUnitBuffs = (saved, additional) => {
+  const defaults = makeUnitBuffs()
+  const base = makeUnitBuffs(saved || {})
+  const extra = makeUnitBuffs(additional || {})
+  const merged = { ...base }
+
+  for (const key of Object.keys(defaults)) {
+    if (typeof defaults[key] === 'boolean') {
+      merged[key] = !!(base[key] || extra[key])
+    }
+  }
+  // Reroll strategies are not ordered; an explicit extra choice takes precedence.
+  merged.hitReroll = pickReroll(extra.hitReroll, base.hitReroll)
+  merged.woundReroll = pickReroll(extra.woundReroll, base.woundReroll)
+  merged.sustainedHits = bestSustained(base.sustainedHits || 'off', extra.sustainedHits || 'off')
+  if (extra.critHitEnabled) {
+    merged.critHit = base.critHitEnabled
+      ? Math.min(base.critHit ?? 6, extra.critHit ?? 6)
+      : (extra.critHit ?? 5)
+  }
+  return merged
+}
+
 // Produce the effective per-weapon profile after applying unit-wide buffs.
 // Never mutates the inputs.
 export const mergeWeaponWithUnit = (weapon, unit) => {
@@ -287,6 +310,12 @@ export const mergeTargetWithUnit = (target, unit) => {
 
   return merged
 }
+
+export const mergeTargetUnitBuffs = (saved, additional) =>
+  mergeTargetWithUnit(
+    makeTargetUnitBuffs(saved || {}),
+    makeTargetUnitBuffs(additional || {})
+  )
 
 // Map of chip keys → true for buffs that the unit layer added or upgraded
 // on the merged target. Chip keys match those in TargetBuffsEditor.

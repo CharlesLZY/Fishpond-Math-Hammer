@@ -8,7 +8,8 @@ import {
   buildWeaponSummary,
 } from './profileSummaries'
 
-function SummaryChips({ chips, limit }) {
+function SummaryChips({ chips, limit, origin = 'saved' }) {
+  const { t } = useT()
   if (chips.length === 0) return null
   const visible = chips.slice(0, limit)
   return (
@@ -16,7 +17,8 @@ function SummaryChips({ chips, limit }) {
       {visible.map((chip) => (
         <span
           key={chip.key}
-          className={`summary-chip${chip.isReroll ? ' summary-chip--reroll' : ''}`}
+          className={`summary-chip${chip.isReroll ? ' summary-chip--reroll' : ''} comparison-buff--${origin}`}
+          title={t(origin === 'added' ? 'comparisonAddedBuffs' : 'comparisonSavedBuffs')}
         >
           {chip.label}
         </span>
@@ -30,14 +32,15 @@ function SummaryChips({ chips, limit }) {
   )
 }
 
-function ProfilePreviewCard({ name, items, unitChips }) {
+function ProfilePreviewCard({ name, items, savedUnitChips, extraUnitChips }) {
   const { t } = useT()
   const [expanded, setExpanded] = useState(false)
   const contentId = useId()
   const visibleItems = expanded ? items : items.slice(0, 2)
   const hasMore =
     items.length > 2 ||
-    unitChips.length > 4 ||
+    savedUnitChips.length > 4 ||
+    extraUnitChips.length > 4 ||
     items.some((item) => item.chips.length > 3)
 
   return (
@@ -46,7 +49,15 @@ function ProfilePreviewCard({ name, items, unitChips }) {
         <strong>{name}</strong>
       </header>
       <div id={contentId} className="profile-preview-content">
-        <SummaryChips chips={unitChips} limit={expanded ? Infinity : 4} />
+        {[
+          { origin: 'saved', chips: savedUnitChips, label: t('comparisonSavedBuffs') },
+          { origin: 'added', chips: extraUnitChips, label: t('comparisonAddedBuffs') },
+        ].map(({ origin, chips, label }) => chips.length > 0 && (
+          <div key={origin} className={`profile-preview-buff-layer profile-preview-buff-layer--${origin}`}>
+            <span className="profile-preview-buff-label">{label}</span>
+            <SummaryChips chips={chips} origin={origin} limit={expanded ? Infinity : 4} />
+          </div>
+        ))}
         <div className="profile-preview-list">
           {visibleItems.map((item, index) => (
             <div className="profile-preview-item" key={index}>
@@ -82,7 +93,7 @@ function ProfilePreviewCard({ name, items, unitChips }) {
   )
 }
 
-export function AttackerProfilePreview({ name, profile }) {
+export function AttackerProfilePreview({ name, profile, savedProfile = profile, extraUnitBuffs }) {
   const { t } = useT()
   const weapons = profile?.weapons || []
   const unitBuffs = profile?.unitBuffs || {}
@@ -106,12 +117,13 @@ export function AttackerProfilePreview({ name, profile }) {
     <ProfilePreviewCard
       name={name}
       items={items}
-      unitChips={buildAttackerUnitBuffSummary(unitBuffs, t)}
+      savedUnitChips={buildAttackerUnitBuffSummary(savedProfile?.unitBuffs, t)}
+      extraUnitChips={buildAttackerUnitBuffSummary(extraUnitBuffs, t)}
     />
   )
 }
 
-export function DefenderProfilePreview({ name, profile }) {
+export function DefenderProfilePreview({ name, profile, savedProfile = profile, extraUnitBuffs }) {
   const { t } = useT()
   const targets = profile?.targets || []
   const unitBuffs = profile?.defenderUnitBuffs || {}
@@ -136,7 +148,8 @@ export function DefenderProfilePreview({ name, profile }) {
     <ProfilePreviewCard
       name={name}
       items={items}
-      unitChips={buildDefenderUnitBuffSummary(unitBuffs, t)}
+      savedUnitChips={buildDefenderUnitBuffSummary(savedProfile?.defenderUnitBuffs, t)}
+      extraUnitChips={buildDefenderUnitBuffSummary(extraUnitBuffs, t)}
     />
   )
 }

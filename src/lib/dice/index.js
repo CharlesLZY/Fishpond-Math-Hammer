@@ -30,10 +30,12 @@ export {
 export { normalizeWeaponProfileRerolls } from './weaponProfile'
 export {
   makeUnitBuffs,
+  mergeUnitBuffs,
   isUnitBuffsEmpty,
   mergeWeaponWithUnit,
   describeUpgrades,
   makeTargetUnitBuffs,
+  mergeTargetUnitBuffs,
   isTargetUnitBuffsEmpty,
   mergeTargetWithUnit,
   describeTargetUpgrades,

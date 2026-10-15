@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { compareAttackerProfiles } from '../attackSimComparison'
+import { mergeUnitBuffs } from '../dice'
 
 const attacker = (strength) => ({
   weapons: [
@@ -134,5 +135,35 @@ describe('compareAttackerProfiles', () => {
 
     expect(results.map(({ result }) => result.expectedKills)).toEqual([1, 1])
     expect(savedDefender).toEqual(originalDefender)
+  })
+
+  it('keeps saved bonuses in simulation while applying only the extra layer', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const saved = { ...attacker(4), unitBuffs: { plusOneDamage: true } }
+    const results = compareAttackerProfiles(
+      [
+        {
+          name: 'Same Profile',
+          profile: {
+            ...saved,
+            unitBuffs: mergeUnitBuffs(saved.unitBuffs, { plusOneDamage: false }),
+          },
+        },
+        {
+          name: 'Same Profile',
+          profile: {
+            ...saved,
+            unitBuffs: mergeUnitBuffs(saved.unitBuffs, {
+              plusOneDamage: false,
+              plusOneAttack: true,
+            }),
+          },
+        },
+      ],
+      { ...defender, targets: [{ ...defender.targets[0], save: 6 }] },
+      25
+    )
+    expect(results.map(({ result }) => result.expectedKills)).toEqual([2, 3])
+    expect(saved.unitBuffs).toEqual({ plusOneDamage: true })
   })
 })

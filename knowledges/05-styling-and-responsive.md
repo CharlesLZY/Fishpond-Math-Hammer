@@ -51,8 +51,15 @@ belongs in that page's stylesheet.
   completed comparisons scroll to the results, respecting reduced motion.
 - Compact previews show two weapon/target entries. Their expansion button
   reveals every entry and buff without enabling profile-stat editing.
-  A separate collapsible Unit Buffs panel edits the comparison-only buffs;
+  A separate collapsible Additional Unit Buffs panel starts empty and edits
+  only the comparison additions, with a button to clear those additions;
   repeated selections have independent panels and stable colors.
+- Saved buffs are gray (`#b8bec8`) read-only summaries, not editable controls.
+  Comparison additions are yellow (`#fbbf24`) and remain editable/removable.
+  Saved and added buffs occupy separate preview rows so an overridden
+  reroll still shows its original gray value beside the new yellow choice.
+  The editor's "Use saved reroll" option removes only the extra override.
+  Simulator and Library buff editors retain their normal editing behavior.
 - At 768px and below, `.attack-simulator-page` scopes 44px touch targets and
   16px input text to 40K pages. React-select reads the same control-height
   variable as native inputs. AoS and other pages retain their existing sizes.

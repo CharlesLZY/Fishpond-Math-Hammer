@@ -22,17 +22,21 @@ const rerollLangKeys = {
   'reroll-non-critical': 'rerollNonCritical',
 }
 
-function UnitBuffsPanel({ value, onChange, disabled = false }) {
+function UnitBuffsPanel({ value, onChange, disabled = false, additional = false }) {
   const { t } = useT()
   const update = (patch) => onChange({ ...value, ...patch })
+  const rerollClassName = (key) => [
+    'reroll-cell',
+    additional && value[key] && value[key] !== 'no-reroll' && 'comparison-buff--added',
+  ].filter(Boolean).join(' ')
 
   const localizedRerollOptions = rerollOptions.map((o) => ({
     ...o,
-    label: t(rerollLangKeys[o.value] ?? o.value),
+    label: t(additional && o.value === 'no-reroll' ? 'useSavedReroll' : rerollLangKeys[o.value] ?? o.value),
   }))
   const localizedWoundRerollOptions = woundRerollOptions.map((o) => ({
     ...o,
-    label: t(rerollLangKeys[o.value] ?? o.value),
+    label: t(additional && o.value === 'no-reroll' ? 'useSavedReroll' : rerollLangKeys[o.value] ?? o.value),
   }))
 
   const buffs = [
@@ -109,15 +113,25 @@ function UnitBuffsPanel({ value, onChange, disabled = false }) {
   ]
 
   const empty = isUnitBuffsEmpty(value)
+  const presentedBuffs = buffs.map((buff) => ({
+    ...buff,
+    disabled,
+    className: additional && buff.active ? 'comparison-buff--added' : undefined,
+  }))
 
   return (
     <div className={`unit-buffs-panel${empty ? ' is-empty' : ''}`}>
       <div className="reroll-row unit-buffs-rerolls">
-        <div className="reroll-cell">
+        <div
+          className={rerollClassName('hitReroll')}
+          title={additional ? t('additionalRerollHint') : undefined}
+        >
           <label>{t('hitReroll')}</label>
           <div className="reroll-cell-controls">
             <FormSelect
               isDisabled={disabled}
+              classNamePrefix="unit-buff-select"
+              aria-label={t('hitReroll')}
               options={localizedRerollOptions}
               value={
                 localizedRerollOptions.find(
@@ -128,11 +142,16 @@ function UnitBuffsPanel({ value, onChange, disabled = false }) {
             />
           </div>
         </div>
-        <div className="reroll-cell">
+        <div
+          className={rerollClassName('woundReroll')}
+          title={additional ? t('additionalRerollHint') : undefined}
+        >
           <label>{t('woundReroll')}</label>
           <div className="reroll-cell-controls">
             <FormSelect
               isDisabled={disabled}
+              classNamePrefix="unit-buff-select"
+              aria-label={t('woundReroll')}
               options={localizedWoundRerollOptions}
               value={
                 localizedWoundRerollOptions.find(
@@ -146,7 +165,7 @@ function UnitBuffsPanel({ value, onChange, disabled = false }) {
       </div>
 
       <div className="buff-row">
-        <BuffChipGroup buffs={buffs} />
+        <BuffChipGroup buffs={presentedBuffs} />
       </div>
     </div>
   )

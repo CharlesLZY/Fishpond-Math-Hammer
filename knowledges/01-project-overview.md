@@ -35,10 +35,15 @@ Routing entry point: [App.jsx](../src/App.jsx).
 
 The 40K secondary navigation is **Simulator / Library / Comparison**.
 Comparison may select the same saved attacker in multiple slots. Each slot
-starts with that Profile's saved unit buffs and can adjust them independently;
-the selected defender's unit buffs can also be adjusted. These changes update
-the preview and simulation together without modifying either saved library.
-Changing a selection restores the newly selected Profile's saved buffs.
+shows the saved buffs as a gray, read-only baseline. A separate Additional
+Unit Buffs editor starts empty and edits only that slot's yellow additions;
+the defender uses the same two-layer UI. Extra rerolls override the saved
+unit reroll for this comparison, including upgrades from reroll ones to
+reroll failures. Clearing the extra choice restores the saved reroll.
+Other duplicate bonuses do not stack: sustained hits, critical thresholds,
+and defensive reductions use the existing best-effect rules. The preview
+and simulation use the same merged configuration without modifying either
+saved library. Changing a selection clears its additions.
 Colors and slot labels distinguish repeated Profiles in ranked results.
 
 ## Calculators

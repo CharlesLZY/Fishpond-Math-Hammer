@@ -9,7 +9,7 @@ import { BuffChipGroup } from '../ui'
 import { useT } from '../attackSim/lang'
 import { isTargetUnitBuffsEmpty } from '../../lib/dice'
 
-function DefenderUnitBuffsPanel({ value, onChange }) {
+function DefenderUnitBuffsPanel({ value, onChange, disabled = false, additional = false }) {
   const { t } = useT()
   const update = (patch) => onChange({ ...value, ...patch })
 
@@ -94,11 +94,16 @@ function DefenderUnitBuffsPanel({ value, onChange }) {
   ]
 
   const empty = isTargetUnitBuffsEmpty(value)
+  const presentedBuffs = buffs.map((buff) => ({
+    ...buff,
+    disabled,
+    className: additional && buff.active ? 'comparison-buff--added' : undefined,
+  }))
 
   return (
     <div className={`unit-buffs-panel${empty ? ' is-empty' : ''}`}>
       <div className="buff-row">
-        <BuffChipGroup buffs={buffs} />
+        <BuffChipGroup buffs={presentedBuffs} />
       </div>
     </div>
   )
