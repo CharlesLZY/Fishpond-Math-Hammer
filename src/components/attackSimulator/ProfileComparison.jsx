@@ -19,6 +19,7 @@ import { useT } from '../attackSim/lang'
 import { FormSelect } from '../ui'
 import DefenderUnitBuffsPanel from './DefenderUnitBuffsPanel'
 import UnitBuffsPanel from './UnitBuffsPanel'
+import { buildComparisonProfileName } from './profileSummaries'
 import {
   AttackerProfilePreview,
   DefenderProfilePreview,
@@ -166,6 +167,7 @@ export default function ProfileComparison() {
           compared
             .map((entry, index) => ({
               ...entry,
+              name: buildComparisonProfileName(entry.name, selectedAttackers[index].extraUnitBuffs),
               color: selectedAttackers[index].color,
               slotNumber: selectedAttackers[index].slotNumber,
             }))

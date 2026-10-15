@@ -615,7 +615,7 @@
 
 .comparison-bar-row {
   display: grid;
-  grid-template-columns: minmax(110px, 180px) minmax(100px, 1fr) 52px;
+  grid-template-columns: minmax(140px, 280px) minmax(100px, 1fr) 52px;
   align-items: center;
   gap: 12px;
   color: #ccc;
@@ -623,9 +623,8 @@
 }
 
 .comparison-bar-row > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .comparison-bar-track {
@@ -965,8 +964,6 @@
 
   .comparison-bar-row > span {
     grid-column: 1 / -1;
-    white-space: normal;
-    overflow-wrap: anywhere;
   }
 }
 

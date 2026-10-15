@@ -10,6 +10,7 @@ import ProfileComparison, { ComparisonResults } from '../ProfileComparison'
 import { AttackerProfilePreview, DefenderProfilePreview } from '../ProfilePreview'
 import AttackSimulatorLayout from '../AttackSimulatorLayout'
 import ProfileLibrary from '../ProfileLibrary'
+import { buildComparisonProfileName } from '../profileSummaries'
 
 const result = (expectedKills) => ({
   expectedKills,
@@ -208,6 +209,36 @@ describe('Profile comparison presentation', () => {
     expect(html).toContain('comparison-result-variant">Attacker 1</span>')
     expect(html).toContain('Attacker 2 · Same Profile')
     expect(html).toContain('Attacker 1 · Same Profile')
+  })
+
+  it.each(['en', 'zh'])('keeps English extra-buff names in both %s result tables and charts', (lang) => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => key === 'attackSim_lang' ? lang : null,
+    })
+    const results = [
+      { plusOneHit: true },
+      { plusOneWound: true },
+      { hitReroll: 'reroll-fail', sustainedHits: '2' },
+    ].map((extra, index) => ({
+      name: buildComparisonProfileName('Same Profile', extra),
+      color: TACTICAL_LINE_COLORS[index].value,
+      slotNumber: index + 1,
+      result: result(3 - index),
+    }))
+    const html = render(<ComparisonResults results={results} />)
+    const table = html.slice(html.indexOf('<table'), html.indexOf('</table>'))
+    const bars = html.slice(html.indexOf('class="comparison-bars"'))
+    const names = [
+      'Same Profile +1Hit',
+      'Same Profile +1Wound',
+      'Same Profile HitRR: Fails Sustained 2',
+    ]
+
+    for (const name of names) {
+      expect(table).toContain(name)
+      expect(bars).toContain(name)
+    }
+    expect(html.match(/role="rowheader"/g)).toHaveLength(3)
   })
 
   it('only needs one saved attacker and one saved defender to start selecting variants', () => {

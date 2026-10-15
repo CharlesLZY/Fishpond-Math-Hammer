@@ -6,6 +6,21 @@ const rerollShort = {
   'reroll-1-2-3': '≤3',
 }
 
+const comparisonBuffLabels = {
+  hitReroll: 'HitRR',
+  woundReroll: 'WoundRR',
+  plusOneAttack: '+1A',
+  plusOneDamage: '+1D',
+  plusOneAp: '+1AP',
+  plusOneHit: '+1Hit',
+  plusOneWound: '+1Wound',
+  lethalHits: 'LethalHits',
+  devastatingWounds: 'DevWounds',
+  sustainedHits: 'Sustained',
+  criticalHit: 'CritHit',
+  ignoresCover: 'IgnoresCover',
+}
+
 const pushReroll = (chips, chipKey, upgradeKey, mode, scope, label, upgrades, t) => {
   if (!mode || mode === 'no-reroll') return
   const short = rerollShort[mode] || mode
@@ -169,6 +184,11 @@ export function buildAttackerUnitBuffSummary(unitBuffs, t) {
     add('critHit', `${t('criticalHit')} ${unitBuffs.critHit}+`)
   if (unitBuffs?.ignoresCover) add('ignoresCover', t('ignoresCover'))
   return chips
+}
+
+export function buildComparisonProfileName(name, extraUnitBuffs) {
+  const chips = buildAttackerUnitBuffSummary(extraUnitBuffs, (key) => comparisonBuffLabels[key])
+  return [name, ...chips.map((chip) => chip.label)].join(' ')
 }
 
 export function buildDefenderUnitBuffSummary(unitBuffs, t) {

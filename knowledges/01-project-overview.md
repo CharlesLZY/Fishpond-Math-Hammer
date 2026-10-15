@@ -47,7 +47,11 @@ Other duplicate bonuses do not stack: sustained hits, critical thresholds,
 and defensive reductions use the existing best-effect rules. The preview
 and simulation use the same merged configuration without modifying either
 saved library. Changing a selection clears its additions.
-Colors and slot labels distinguish repeated Profiles in ranked results.
+Result names append compact English labels for the slot's additional buffs
+(for example `Intercessors +1Hit` or `Intercessors +1D Sustained 2`) in both
+the ranking table and chart, regardless of UI language. The suffix is
+captured with the simulation result; saved buffs and stored Profile names
+are unchanged. Colors and slot labels remain available to distinguish variants.
 
 ## Calculators
 

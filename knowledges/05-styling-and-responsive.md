@@ -45,6 +45,9 @@ belongs in that page's stylesheet.
   Diff Green, and Gold; Pearl remains available only on the board.
 - Slot colors stay attached to their attacker when other slots are removed
   or results are ranked.
+- Result table and bar-chart labels include the slot's additional buff
+  suffixes in English. Long chart labels wrap on desktop as well as mobile
+  so the suffixes are visible instead of being truncated.
 - Simulator and Comparison use the shared `FormSelect` for saved Profiles.
   Menus are capped at 8 rows (based on current typography, padding, and
   touch-target height), automatically open above/below as space allows,

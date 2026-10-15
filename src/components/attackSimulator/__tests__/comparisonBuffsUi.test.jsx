@@ -6,6 +6,7 @@ import { LangProvider } from '../../attackSim/lang'
 import UnitBuffsPanel from '../UnitBuffsPanel'
 import DefenderUnitBuffsPanel from '../DefenderUnitBuffsPanel'
 import { AttackerProfilePreview, DefenderProfilePreview } from '../ProfilePreview'
+import { buildComparisonProfileName } from '../profileSummaries'
 
 const render = (content) =>
   renderToStaticMarkup(<LangProvider>{content}</LangProvider>)
@@ -23,6 +24,81 @@ const chipOrigins = (html, label) =>
   [...html.matchAll(/<span\b[^>]*class="[^"]*comparison-buff--(saved|added)"[^>]*>([^<]*)<\/span>/g)]
     .filter(([, , text]) => text === label)
     .map(([, origin]) => origin)
+
+describe('comparison Profile names', () => {
+  it.each([
+    ['plusOneAttack', '+1A'],
+    ['plusOneDamage', '+1D'],
+    ['plusOneAp', '+1AP'],
+    ['plusOneHit', '+1Hit'],
+    ['plusOneWound', '+1Wound'],
+    ['lethalHits', 'LethalHits'],
+    ['devastatingWounds', 'DevWounds'],
+    ['ignoresCover', 'IgnoresCover'],
+  ])('includes the enabled %s addition in the name', (key, suffix) => {
+    expect(buildComparisonProfileName('Squad', makeUnitBuffs({ [key]: true })))
+      .toBe(`Squad ${suffix}`)
+  })
+
+  it('retains reroll strategies, numeric parameters, and every enabled addition', () => {
+    const extra = Object.freeze(makeUnitBuffs({
+      hitReroll: 'reroll-fail',
+      woundReroll: 'reroll-one-two',
+      plusOneAttack: true,
+      plusOneDamage: true,
+      plusOneAp: true,
+      plusOneHit: true,
+      plusOneWound: true,
+      lethalHits: true,
+      devastatingWounds: true,
+      sustainedHits: 'D3',
+      critHitEnabled: true,
+      critHit: 4,
+      ignoresCover: true,
+    }))
+
+    expect(buildComparisonProfileName('Squad', extra)).toBe(
+      'Squad HitRR: Fails WoundRR: Ones and Twos +1A +1D +1AP +1Hit +1Wound LethalHits DevWounds Sustained D3 CritHit 4+ IgnoresCover'
+    )
+  })
+
+  it.each([
+    ['reroll-one', '1s'],
+    ['reroll-one-two', 'Ones and Twos'],
+    ['reroll-fail', 'Fails'],
+    ['reroll-non-critical', 'Non-Crit'],
+  ])('distinguishes the %s reroll choice', (mode, label) => {
+    expect(buildComparisonProfileName('Squad', { hitReroll: mode, woundReroll: mode }))
+      .toBe(`Squad HitRR: ${label} WoundRR: ${label}`)
+  })
+
+  it('omits disabled buffs and leaves the original name intact with no additions', () => {
+    for (const extra of [undefined, null, {}, makeUnitBuffs({ critHit: 2 })]) {
+      expect(buildComparisonProfileName('原面板 Profile A', extra)).toBe('原面板 Profile A')
+    }
+    expect(buildComparisonProfileName('Squad', {
+      sustainedHits: 'D6',
+      critHit: 2,
+      critHitEnabled: false,
+    })).toBe('Squad Sustained D6')
+  })
+
+  it('captures a label string without renaming or changing saved data', () => {
+    const saved = Object.freeze({
+      name: 'Squad',
+      unitBuffs: Object.freeze(makeUnitBuffs({ lethalHits: true })),
+    })
+    const extra = makeUnitBuffs({ plusOneHit: true })
+    const snapshot = buildComparisonProfileName(saved.name, extra)
+    extra.plusOneHit = false
+
+    expect(snapshot).toBe('Squad +1Hit')
+    expect(buildComparisonProfileName(saved.name, extra)).toBe('Squad')
+    expect(saved.name).toBe('Squad')
+    expect(saved.unitBuffs.lethalHits).toBe(true)
+    expect(snapshot).not.toContain('LethalHits')
+  })
+})
 
 describe('comparison additional-buff editors and read-only origins', () => {
   beforeEach(() => {
