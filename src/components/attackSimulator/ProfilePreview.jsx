@@ -9,7 +9,6 @@ import {
 } from './profileSummaries'
 
 function SummaryChips({ chips, limit, origin = 'saved' }) {
-  const { t } = useT()
   if (chips.length === 0) return null
   const visible = chips.slice(0, limit)
   return (
@@ -18,7 +17,6 @@ function SummaryChips({ chips, limit, origin = 'saved' }) {
         <span
           key={chip.key}
           className={`summary-chip${chip.isReroll ? ' summary-chip--reroll' : ''} comparison-buff--${origin}`}
-          title={t(origin === 'added' ? 'comparisonAddedBuffs' : 'comparisonSavedBuffs')}
         >
           {chip.label}
         </span>
@@ -50,11 +48,15 @@ function ProfilePreviewCard({ name, items, savedUnitChips, extraUnitChips }) {
       </header>
       <div id={contentId} className="profile-preview-content">
         {[
-          { origin: 'saved', chips: savedUnitChips, label: t('comparisonSavedBuffs') },
-          { origin: 'added', chips: extraUnitChips, label: t('comparisonAddedBuffs') },
-        ].map(({ origin, chips, label }) => chips.length > 0 && (
-          <div key={origin} className={`profile-preview-buff-layer profile-preview-buff-layer--${origin}`}>
-            <span className="profile-preview-buff-label">{label}</span>
+          { origin: 'saved', chips: savedUnitChips },
+          { origin: 'added', chips: extraUnitChips },
+        ].map(({ origin, chips }) => chips.length > 0 && (
+          <div
+            key={origin}
+            className={`profile-preview-buff-layer profile-preview-buff-layer--${origin}`}
+            role="group"
+            aria-label={t(origin === 'added' ? 'additionalUnitBuffs' : 'unitBuffsSection')}
+          >
             <SummaryChips chips={chips} origin={origin} limit={expanded ? Infinity : 4} />
           </div>
         ))}

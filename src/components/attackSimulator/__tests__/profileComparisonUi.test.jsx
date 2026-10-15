@@ -62,6 +62,7 @@ describe('Profile comparison presentation', () => {
     expect(html).toContain('--attacker-color:#6b8caf')
     expect(html).toContain('--attacker-color:#f85149')
     expect(html).not.toContain('#e6e1d3')
+    expect(html).not.toContain('comparison-buff-legend')
   })
 
   it.each([

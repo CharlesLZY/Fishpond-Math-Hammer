@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Lock, Plus, RotateCcw, X } from 'lucide-react'
+import { Plus, RotateCcw, X } from 'lucide-react'
 import {
   getSavedTargetSetLibrary,
   getSavedWeaponSetLibrary,
@@ -192,17 +192,6 @@ export default function ProfileComparison() {
           {t('manageProfiles')}
         </Link>
       </header>
-
-      <div className="comparison-buff-legend" role="group" aria-label={t('comparisonBuffSources')}>
-        <span className="summary-chip comparison-buff--saved">
-          <Lock size={12} aria-hidden="true" />
-          {t('comparisonSavedBuffs')}
-        </span>
-        <span className="summary-chip comparison-buff--added">
-          <Plus size={12} aria-hidden="true" />
-          {t('comparisonAddedBuffs')}
-        </span>
-      </div>
 
       {(attackerNames.length === 0 || defenderNames.length === 0) && (
         <div className="profile-comparison-empty">

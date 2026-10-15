@@ -152,5 +152,7 @@ describe('comparison additional-buff editors and read-only origins', () => {
     expect(chipOrigins(html, 'Hit Reroll: 1s')).toEqual(['saved'])
     expect(chipOrigins(html, 'Hit Reroll: Fails')).toEqual(['added'])
     expect(html).not.toMatch(/<(input|select|textarea)\b/)
+    expect(html).not.toContain('profile-preview-buff-label')
+    expect(html).not.toMatch(/Saved \(locked\)|Added for comparison/)
   })
 })
