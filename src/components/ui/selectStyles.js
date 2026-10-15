@@ -26,9 +26,15 @@ export const selectStyles = {
     color: '#d0d0d0',
     fontSize: 'var(--select-font-size, inherit)'
   }),
+  menu: (baseStyles) => ({
+    ...baseStyles,
+    zIndex: 20
+  }),
   menuList: (baseStyles) => ({
     ...baseStyles,
-    backgroundColor: '#2a2a2a'
+    backgroundColor: '#2a2a2a',
+    overscrollBehaviorY: 'contain',
+    touchAction: 'pan-y'
   }),
   option: (baseStyles, state) => ({
     ...baseStyles,
@@ -36,6 +42,7 @@ export const selectStyles = {
     color: state.isSelected ? '#fbbf24' : '#d0d0d0',
     minHeight: 'var(--select-option-height, auto)',
     fontSize: 'var(--select-font-size, inherit)',
+    overflowWrap: 'anywhere',
     cursor: 'pointer',
     '&:hover': {
       backgroundColor: '#3a3a3a'

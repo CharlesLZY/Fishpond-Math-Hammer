@@ -339,7 +339,8 @@
   color: #fbbf24;
 }
 
-.comparison-unit-buffs .unit-buff-select__clear-indicator {
+.comparison-unit-buffs .unit-buff-select__clear-indicator,
+.attack-simulator-page .profile-select__clear-indicator {
   min-width: var(--form-control-height);
   min-height: var(--form-control-height);
   justify-content: center;
@@ -663,8 +664,7 @@
   .attack-simulator-page :is(
     input[type="text"],
     input[type="number"],
-    input[type="search"],
-    select
+    input[type="search"]
   ) {
     min-height: 44px;
     min-width: 0;

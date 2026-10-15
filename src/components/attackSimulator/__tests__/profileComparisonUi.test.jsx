@@ -228,7 +228,11 @@ describe('Profile comparison presentation', () => {
     )
 
     expect(html).not.toContain('profile-comparison-empty')
-    expect(html.match(/value="Shared"/g)).toHaveLength(2)
+    expect(html).not.toContain('<select')
+    expect(html.match(/role="combobox"/g)).toHaveLength(3)
+    expect(html).toContain('aria-label="Select Defender Profile"')
+    expect(html).toContain('aria-label="Select Attacker Profile 1"')
+    expect(html).toContain('aria-label="Select Attacker Profile 2"')
     expect(html).not.toContain('<p>')
   })
 

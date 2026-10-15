@@ -274,6 +274,7 @@ function AttackSimulator() {
             value={selectedWeaponSet}
             options={savedWeaponSets}
             placeholder={t('savedAttackerSets')}
+            emptyLabel={t('noSavedProfiles')}
             onChange={handleLoadWeaponSet}
             onSave={() => setNamingSide('attacker')}
             saveLabel={t('saveProfile')}
@@ -301,6 +302,7 @@ function AttackSimulator() {
             value={selectedTargetSet}
             options={savedTargetSets}
             placeholder={t('savedDefenderSets')}
+            emptyLabel={t('noSavedProfiles')}
             onChange={handleLoadTargetSet}
             onSave={() => setNamingSide('defender')}
             saveLabel={t('saveProfile')}

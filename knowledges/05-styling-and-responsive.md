@@ -45,6 +45,10 @@ belongs in that page's stylesheet.
   Diff Green, and Gold; Pearl remains available only on the board.
 - Slot colors stay attached to their attacker when other slots are removed
   or results are ranked.
+- Simulator and Comparison use the shared `FormSelect` for saved Profiles.
+  Menus are capped at 240px, automatically open above/below as space allows,
+  and scroll vertically with contained wheel/touch scrolling. Long option
+  labels wrap instead of widening the page; selected labels remain compact.
 - At 768px and below, the comparison table becomes labeled, stacked result
   cards using the same markup. Long names wrap and no horizontal table
   scrolling is needed. The run controls remain reachable at the bottom and

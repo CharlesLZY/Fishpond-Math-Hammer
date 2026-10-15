@@ -245,28 +245,6 @@
   display: block;
 }
 
-.toolbar-select {
-  height: 34px;
-  box-sizing: border-box;
-  background: #2a2a2a;
-  color: #d0d0d0;
-  border: 1px solid #4a4a4a;
-  border-radius: 6px;
-  padding: 0 10px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  max-width: 220px;
-  transition: border-color 0.15s;
-}
-
-.toolbar-select:hover,
-.toolbar-select:focus {
-  border-color: #fbbf24;
-  outline: none;
-}
-
 /* "Saved set" cluster — a select of saved entries plus library actions.
    Slightly inset (dashed border) so it reads
    as a sub-toolbar tied to the surrounding section. */
@@ -303,11 +281,6 @@
   .toolbar-button {
     flex: 1 1 auto;
     justify-content: center;
-  }
-
-  .toolbar-select {
-    flex: 1 1 100%;
-    max-width: none;
   }
 
   .profile-set-controls {

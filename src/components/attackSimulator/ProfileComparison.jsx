@@ -16,6 +16,7 @@ import {
   mergeUnitBuffs,
 } from '../../lib/dice'
 import { useT } from '../attackSim/lang'
+import { FormSelect } from '../ui'
 import DefenderUnitBuffsPanel from './DefenderUnitBuffsPanel'
 import UnitBuffsPanel from './UnitBuffsPanel'
 import {
@@ -52,12 +53,12 @@ export default function ProfileComparison() {
   const { t } = useT()
   const [attackerLibrary] = useState(() => getSavedWeaponSetLibrary())
   const [defenderLibrary] = useState(() => getSavedTargetSetLibrary())
-  const attackerNames = Object.keys(attackerLibrary).sort((a, b) =>
-    a.localeCompare(b)
-  )
-  const defenderNames = Object.keys(defenderLibrary).sort((a, b) =>
-    a.localeCompare(b)
-  )
+  const attackerOptions = Object.keys(attackerLibrary)
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ value: name, label: name }))
+  const defenderOptions = Object.keys(defenderLibrary)
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ value: name, label: name }))
   const [defenderName, setDefenderName] = useState('')
   const [defenderExtraBuffs, setDefenderExtraBuffs] = useState(() => makeTargetUnitBuffs())
   const [attackerSlots, setAttackerSlots] = useState(() =>
@@ -193,7 +194,7 @@ export default function ProfileComparison() {
         </Link>
       </header>
 
-      {(attackerNames.length === 0 || defenderNames.length === 0) && (
+      {(attackerOptions.length === 0 || defenderOptions.length === 0) && (
         <div className="profile-comparison-empty">
           <strong>{t('comparisonNeedsProfiles')}</strong>
           <Link to="/attack-simulator/profiles">{t('manageProfiles')}</Link>
@@ -204,25 +205,22 @@ export default function ProfileComparison() {
         <header>
           <h3>{t('selectDefender')}</h3>
         </header>
-        <select
-          className="toolbar-select comparison-select"
-          value={defenderName}
+        <FormSelect
+          className="comparison-select"
+          classNamePrefix="profile-select"
+          options={defenderOptions}
+          value={defenderOptions.find((option) => option.value === defenderName) ?? null}
+          placeholder={t('selectDefender')}
+          noOptionsMessage={() => t('noSavedProfiles')}
           aria-label={t('selectDefender')}
-          disabled={running}
-          onChange={(event) => {
-            const name = event.target.value
-            setDefenderName(name)
+          isDisabled={running}
+          isClearable
+          onChange={(option) => {
+            setDefenderName(option?.value ?? '')
             setDefenderExtraBuffs(makeTargetUnitBuffs())
             invalidate()
           }}
-        >
-          <option value="">{t('selectDefender')}</option>
-          {defenderNames.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
+        />
         {configuredDefender && (
           <>
             <DefenderProfilePreview
@@ -268,27 +266,20 @@ export default function ProfileComparison() {
                   style={{ backgroundColor: color }}
                   aria-hidden="true"
                 />
-                <select
-                  className="toolbar-select comparison-select"
-                  value={name}
-                  disabled={running}
-                  onChange={(event) =>
-                    updateAttacker(color, event.target.value)
+                <FormSelect
+                  className="comparison-select"
+                  classNamePrefix="profile-select"
+                  options={attackerOptions}
+                  value={attackerOptions.find((option) => option.value === name) ?? null}
+                  placeholder={`${t('selectAttacker')} ${slotNumber}`}
+                  noOptionsMessage={() => t('noSavedProfiles')}
+                  isDisabled={running}
+                  isClearable
+                  onChange={(option) =>
+                    updateAttacker(color, option?.value ?? '')
                   }
                   aria-label={`${t('selectAttacker')} ${slotNumber}`}
-                >
-                  <option value="">
-                    {t('selectAttacker')} {slotNumber}
-                  </option>
-                  {attackerNames.map((option) => (
-                    <option
-                      key={option}
-                      value={option}
-                    >
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                />
                 {attackerSlots.length > 2 && (
                   <button
                     type="button"

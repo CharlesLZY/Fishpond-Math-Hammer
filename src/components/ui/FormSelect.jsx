@@ -8,13 +8,22 @@ import { selectStyles, buffSelectStyles } from './selectStyles'
 //   variant: 'default' | 'buff'
 //            buff = compact inline style
 //   ...rest: any react-select prop (options, value, onChange, etc.)
-function FormSelect({ variant = 'default', styles, isSearchable = false, ...rest }) {
+function FormSelect({
+  variant = 'default',
+  styles,
+  isSearchable = false,
+  maxMenuHeight = 240,
+  menuPlacement = 'auto',
+  ...rest
+}) {
   const baseStyles = variant === 'buff' ? buffSelectStyles : selectStyles
 
   return (
     <Select
       styles={styles ?? baseStyles}
       isSearchable={isSearchable}
+      maxMenuHeight={maxMenuHeight}
+      menuPlacement={menuPlacement}
       {...rest}
     />
   )

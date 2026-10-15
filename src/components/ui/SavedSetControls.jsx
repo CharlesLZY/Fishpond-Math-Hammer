@@ -1,9 +1,11 @@
 import { RefreshCw, Save } from 'lucide-react'
+import FormSelect from './FormSelect'
 
 function SavedSetControls({
   value,
   options,
   placeholder,
+  emptyLabel,
   onChange,
   onSave,
   saveLabel = 'Save Set…',
@@ -13,21 +15,21 @@ function SavedSetControls({
   groupAriaLabel,
   selectAriaLabel,
 }) {
+  const selectOptions = options.map((name) => ({ value: name, label: name }))
+
   return (
     <div className="profile-set-controls" role="group" aria-label={groupAriaLabel}>
-      <select
-        className="toolbar-select profile-set-select"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <FormSelect
+        className="profile-set-select"
+        classNamePrefix="profile-select"
+        options={selectOptions}
+        value={selectOptions.find((option) => option.value === value) ?? null}
+        onChange={(option) => onChange(option?.value ?? '')}
+        placeholder={placeholder}
+        noOptionsMessage={() => emptyLabel}
+        isClearable
         aria-label={selectAriaLabel}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      />
       <button type="button" className="toolbar-button" onClick={onSave}>
         <Save size={14} />
         <span>{saveLabel}</span>

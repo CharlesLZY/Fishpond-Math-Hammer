@@ -99,6 +99,11 @@ Thin react-select wrapper with the dark theme baked in.
 />
 ```
 `isSearchable` defaults to `false` (we never want the keyboard popup on a 5-item list).
+Menus default to `maxMenuHeight={240}` and `menuPlacement="auto"`. Long
+lists scroll internally using wheel, scrollbar, or touch gestures; these
+defaults can be overridden through normal react-select props. Simulator
+and Comparison Profile selectors use this same component as Hit Reroll,
+with a clear action to remove the current selection.
 
 ### `selectStyles.js`
 Two style objects (`selectStyles`, `buffSelectStyles`) for react-select. If
