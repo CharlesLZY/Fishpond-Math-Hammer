@@ -81,4 +81,58 @@ describe('compareAttackerProfiles', () => {
       )
     ).toThrow('defender Profile')
   })
+
+  it('compares repeated attackers with independent unit buffs without modifying saved Profiles', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const savedAttacker = attacker(4)
+    const savedDefender = {
+      ...defender,
+      targets: [{ ...defender.targets[0], save: 6 }],
+    }
+    const originalAttacker = structuredClone(savedAttacker)
+    const originalDefender = structuredClone(savedDefender)
+
+    const results = compareAttackerProfiles(
+      [
+        { name: 'Same Profile', profile: savedAttacker },
+        {
+          name: 'Same Profile',
+          profile: { ...savedAttacker, unitBuffs: { plusOneDamage: true } },
+        },
+      ],
+      savedDefender,
+      25
+    )
+
+    expect(results.map(({ name }) => name)).toEqual(['Same Profile', 'Same Profile'])
+    expect(results.map(({ result }) => result.expectedKills)).toEqual([1, 2])
+    expect(results.map(({ result }) => result.expectedDamage)).toEqual([2, 4])
+    expect(savedAttacker).toEqual(originalAttacker)
+    expect(savedDefender).toEqual(originalDefender)
+  })
+
+  it('applies temporary defender unit buffs to every attacker', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const profile = attacker(4)
+    const savedDefender = {
+      ...defender,
+      targets: [{ ...defender.targets[0], save: 6 }],
+    }
+    const originalDefender = structuredClone(savedDefender)
+    const attackers = [
+      { name: 'Same Profile', profile },
+      {
+        name: 'Same Profile',
+        profile: { ...profile, unitBuffs: { plusOneDamage: true } },
+      },
+    ]
+    const results = compareAttackerProfiles(
+      attackers,
+      { ...savedDefender, defenderUnitBuffs: { halfDamage: true } },
+      25
+    )
+
+    expect(results.map(({ result }) => result.expectedKills)).toEqual([1, 1])
+    expect(savedDefender).toEqual(originalDefender)
+  })
 })

@@ -7,7 +7,10 @@ import {
 } from '../../lib/attackSimStorage'
 import { compareAttackerProfiles } from '../../lib/attackSimComparison'
 import { TACTICAL_LINE_COLORS } from '../../lib/colors'
+import { makeTargetUnitBuffs, makeUnitBuffs } from '../../lib/dice'
 import { useT } from '../attackSim/lang'
+import DefenderUnitBuffsPanel from './DefenderUnitBuffsPanel'
+import UnitBuffsPanel from './UnitBuffsPanel'
 import {
   AttackerProfilePreview,
   DefenderProfilePreview,
@@ -26,13 +29,30 @@ export default function ProfileComparison() {
     a.localeCompare(b)
   )
   const [defenderName, setDefenderName] = useState('')
+  const [defenderUnitBuffs, setDefenderUnitBuffs] = useState(() => makeTargetUnitBuffs())
   const [attackerSlots, setAttackerSlots] = useState(() =>
-    attackerColors.slice(0, 2).map((color) => ({ name: '', color }))
+    attackerColors.slice(0, 2).map((color) => ({
+      name: '',
+      color,
+      unitBuffs: makeUnitBuffs(),
+    }))
   )
   const [highPrecision, setHighPrecision] = useState(false)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState(null)
   const [results, setResults] = useState(null)
+
+  const configuredAttackers = attackerSlots.map((slot, index) => ({
+    ...slot,
+    slotNumber: index + 1,
+    profile: slot.name
+      ? { ...attackerLibrary[slot.name], unitBuffs: slot.unitBuffs }
+      : null,
+  }))
+  const selectedAttackers = configuredAttackers.filter(({ name }) => name)
+  const configuredDefender = defenderName
+    ? { ...defenderLibrary[defenderName], defenderUnitBuffs }
+    : null
 
   const invalidate = () => {
     setResults(null)
@@ -40,8 +60,21 @@ export default function ProfileComparison() {
   }
 
   const updateAttacker = (color, name) => {
+    const unitBuffs = makeUnitBuffs(attackerLibrary[name]?.unitBuffs || {})
     setAttackerSlots((current) =>
-      current.map((slot) => (slot.color === color ? { ...slot, name } : slot))
+      current.map((slot) =>
+        slot.color === color ? { ...slot, name, unitBuffs } : slot
+      )
+    )
+    invalidate()
+  }
+
+  const updateAttackerUnitBuffs = (color, unitBuffs) => {
+    if (running) return
+    setAttackerSlots((current) =>
+      current.map((slot) =>
+        slot.color === color ? { ...slot, unitBuffs } : slot
+      )
     )
     invalidate()
   }
@@ -51,7 +84,10 @@ export default function ProfileComparison() {
     const color = attackerColors.find(
       (value) => !attackerSlots.some((slot) => slot.color === value)
     )
-    setAttackerSlots((current) => [...current, { name: '', color }])
+    setAttackerSlots((current) => [
+      ...current,
+      { name: '', color, unitBuffs: makeUnitBuffs() },
+    ])
     invalidate()
   }
 
@@ -64,18 +100,12 @@ export default function ProfileComparison() {
   }
 
   const handleRun = () => {
-    const selectedSlots = attackerSlots.filter(({ name }) => name)
-    const selectedNames = selectedSlots.map(({ name }) => name)
     if (!defenderName) {
       setError('Choose a defender Profile.')
       return
     }
-    if (selectedNames.length < 2) {
+    if (selectedAttackers.length < 2) {
       setError('Choose at least two attacker Profiles.')
-      return
-    }
-    if (new Set(selectedNames).size !== selectedNames.length) {
-      setError('Choose different attacker Profiles.')
       return
     }
 
@@ -84,18 +114,16 @@ export default function ProfileComparison() {
     setTimeout(() => {
       try {
         const compared = compareAttackerProfiles(
-          selectedNames.map((name) => ({
-            name,
-            profile: attackerLibrary[name],
-          })),
-          defenderLibrary[defenderName],
+          selectedAttackers,
+          configuredDefender,
           highPrecision ? 10000 : 1000
         )
         setResults(
           compared
             .map((entry, index) => ({
               ...entry,
-              color: selectedSlots[index].color,
+              color: selectedAttackers[index].color,
+              slotNumber: selectedAttackers[index].slotNumber,
             }))
             .sort(
               (left, right) =>
@@ -111,25 +139,18 @@ export default function ProfileComparison() {
     }, 0)
   }
 
-  const selectedNames = attackerSlots.map(({ name }) => name).filter(Boolean)
-  const canCompare =
-    defenderName &&
-    selectedNames.length >= 2 &&
-    new Set(selectedNames).size === selectedNames.length
+  const canCompare = defenderName && selectedAttackers.length >= 2
 
   return (
     <section className="profile-comparison-page">
       <header className="attack-sim-section-header profile-page-heading">
-        <div>
-          <h2>{t('comparison')}</h2>
-          <p>{t('comparisonDescription')}</p>
-        </div>
+        <h2>{t('comparison')}</h2>
         <Link className="toolbar-button profile-page-link" to="/attack-simulator/profiles">
           {t('manageProfiles')}
         </Link>
       </header>
 
-      {(attackerNames.length < 2 || defenderNames.length === 0) && (
+      {(attackerNames.length === 0 || defenderNames.length === 0) && (
         <div className="profile-comparison-empty">
           <strong>{t('comparisonNeedsProfiles')}</strong>
           <span>{t('comparisonNeedsProfilesHint')}</span>
@@ -147,7 +168,11 @@ export default function ProfileComparison() {
           aria-label={t('selectDefender')}
           disabled={running}
           onChange={(event) => {
-            setDefenderName(event.target.value)
+            const name = event.target.value
+            setDefenderName(name)
+            setDefenderUnitBuffs(
+              makeTargetUnitBuffs(defenderLibrary[name]?.defenderUnitBuffs || {})
+            )
             invalidate()
           }}
         >
@@ -158,12 +183,27 @@ export default function ProfileComparison() {
             </option>
           ))}
         </select>
-        {defenderName && (
-          <DefenderProfilePreview
-            key={defenderName}
-            name={defenderName}
-            profile={defenderLibrary[defenderName]}
-          />
+        {configuredDefender && (
+          <>
+            <details className="comparison-unit-buffs">
+              <summary>{t('unitBuffsSection')}</summary>
+              <fieldset disabled={running} aria-label={t('unitBuffsSection')}>
+                <DefenderUnitBuffsPanel
+                  value={defenderUnitBuffs}
+                  onChange={(next) => {
+                    if (running) return
+                    setDefenderUnitBuffs(next)
+                    invalidate()
+                  }}
+                />
+              </fieldset>
+            </details>
+            <DefenderProfilePreview
+              key={defenderName}
+              name={defenderName}
+              profile={configuredDefender}
+            />
+          </>
         )}
       </section>
 
@@ -173,12 +213,13 @@ export default function ProfileComparison() {
           <span>{attackerSlots.length} / {attackerColors.length}</span>
         </header>
         <div className="comparison-attacker-grid">
-          {attackerSlots.map(({ name, color }, index) => (
+          {configuredAttackers.map(({ name, color, profile, unitBuffs, slotNumber }) => (
             <div
               className="comparison-attacker-slot"
               key={color}
               style={{ '--attacker-color': color }}
             >
+              <h4 className="comparison-slot-label">{t('attackerNumber', slotNumber)}</h4>
               <div className="comparison-slot-toolbar">
                 <span
                   className="comparison-color-dot"
@@ -192,18 +233,15 @@ export default function ProfileComparison() {
                   onChange={(event) =>
                     updateAttacker(color, event.target.value)
                   }
-                  aria-label={`${t('selectAttacker')} ${index + 1}`}
+                  aria-label={`${t('selectAttacker')} ${slotNumber}`}
                 >
                   <option value="">
-                    {t('selectAttacker')} {index + 1}
+                    {t('selectAttacker')} {slotNumber}
                   </option>
                   {attackerNames.map((option) => (
                     <option
                       key={option}
                       value={option}
-                      disabled={
-                        option !== name && selectedNames.includes(option)
-                      }
                     >
                       {option}
                     </option>
@@ -215,19 +253,31 @@ export default function ProfileComparison() {
                     className="comparison-remove-button"
                     onClick={() => removeAttacker(color)}
                     disabled={running}
-                    aria-label={t('removeAttacker', index + 1)}
-                    title={t('removeAttacker', index + 1)}
+                    aria-label={t('removeAttacker', slotNumber)}
+                    title={t('removeAttacker', slotNumber)}
                   >
                     <X size={15} />
                   </button>
                 )}
               </div>
-              {name ? (
-                <AttackerProfilePreview
-                  key={name}
-                  name={name}
-                  profile={attackerLibrary[name]}
-                />
+              {profile ? (
+                <>
+                  <details className="comparison-unit-buffs">
+                    <summary>{t('unitBuffsSection')}</summary>
+                    <fieldset disabled={running} aria-label={t('unitBuffsSection')}>
+                      <UnitBuffsPanel
+                        value={unitBuffs}
+                        onChange={(next) => updateAttackerUnitBuffs(color, next)}
+                        disabled={running}
+                      />
+                    </fieldset>
+                  </details>
+                  <AttackerProfilePreview
+                    key={name}
+                    name={name}
+                    profile={profile}
+                  />
+                </>
               ) : (
                 <div className="comparison-slot-empty">
                   {t('selectAttacker')}
@@ -325,12 +375,12 @@ export function ComparisonResults({ results }) {
             </tr>
           </thead>
           <tbody role="rowgroup">
-            {results.map(({ name, color, result }, index) => {
+            {results.map(({ name, color, result, slotNumber }, index) => {
               const delta = bestKills > 0
                 ? ((result.expectedKills - bestKills) / bestKills) * 100
                 : 0
               return (
-                <tr key={name} role="row" style={{ '--attacker-color': color }}>
+                <tr key={color} role="row" style={{ '--attacker-color': color }}>
                   <td role="cell" className="comparison-rank">{index + 1}</td>
                   <th scope="row" role="rowheader" className="comparison-result-name">
                     <span
@@ -339,6 +389,9 @@ export function ComparisonResults({ results }) {
                       aria-hidden="true"
                     />
                     {name}
+                    <span className="comparison-result-variant">
+                      {t('attackerNumber', slotNumber)}
+                    </span>
                   </th>
                   <td role="cell" data-label={t('expectedModelsKilled')}>
                     <span className="comparison-metric-value">
@@ -367,9 +420,9 @@ export function ComparisonResults({ results }) {
 
       <div className="comparison-bars">
         <h3>{t('expectedModelsKilled')}</h3>
-        {results.map(({ name, color, result }) => (
-          <div className="comparison-bar-row" key={name}>
-            <span>{name}</span>
+        {results.map(({ name, color, result, slotNumber }) => (
+          <div className="comparison-bar-row" key={color}>
+            <span>{t('attackerNumber', slotNumber)} · {name}</span>
             <div className="comparison-bar-track" aria-hidden="true">
               <div
                 className="comparison-bar-fill"

@@ -7,6 +7,8 @@ import { DEFAULT_DRAW_COLOR } from '../../../macro-battleplan/config/board'
 import { LangProvider } from '../../attackSim/lang'
 import ProfileComparison, { ComparisonResults } from '../ProfileComparison'
 import { AttackerProfilePreview, DefenderProfilePreview } from '../ProfilePreview'
+import AttackSimulatorLayout from '../AttackSimulatorLayout'
+import ProfileLibrary from '../ProfileLibrary'
 
 const result = (expectedKills) => ({
   expectedKills,
@@ -50,8 +52,8 @@ describe('Profile comparison presentation', () => {
     vi.stubGlobal('localStorage', { getItem: () => lang })
     const html = render(
       <ComparisonResults results={[
-        { name: 'Alpha', color: '#6b8caf', result: result(3) },
-        { name: 'Bravo', color: '#f85149', result: result(2) },
+        { name: 'Alpha', color: '#6b8caf', slotNumber: 1, result: result(3) },
+        { name: 'Bravo', color: '#f85149', slotNumber: 2, result: result(2) },
       ]} />
     )
 
@@ -68,8 +70,8 @@ describe('Profile comparison presentation', () => {
   it('retains each attacker color regardless of result order', () => {
     const html = render(
       <ComparisonResults results={[
-        { name: 'Gold', color: '#e3b341', result: result(4) },
-        { name: 'Blue', color: '#6b8caf', result: result(2) },
+        { name: 'Gold', color: '#e3b341', slotNumber: 4, result: result(4) },
+        { name: 'Blue', color: '#6b8caf', slotNumber: 1, result: result(2) },
       ]} />
     )
 
@@ -83,8 +85,8 @@ describe('Profile comparison presentation', () => {
   it('renders zero-output comparisons without an invalid percentage', () => {
     const html = render(
       <ComparisonResults results={[
-        { name: 'Alpha', color: '#6b8caf', result: result(0) },
-        { name: 'Bravo', color: '#f85149', result: result(0) },
+        { name: 'Alpha', color: '#6b8caf', slotNumber: 1, result: result(0) },
+        { name: 'Bravo', color: '#f85149', slotNumber: 2, result: result(0) },
       ]} />
     )
     expect(html).not.toMatch(/NaN|Infinity/)
@@ -105,7 +107,7 @@ describe('Profile comparison presentation', () => {
     expect(html).toContain('First')
     expect(html).toContain('Second')
     expect(html).not.toContain('Third')
-    expect(html).toContain('3 weapon profiles')
+    expect(html).not.toContain('3 weapon profiles')
     expect(html).toContain('A 5')
     expect(html).toContain('aria-expanded="false"')
     expect(html).toContain('aria-controls=')
@@ -126,5 +128,68 @@ describe('Profile comparison presentation', () => {
     expect(html).toContain('FNP 5+')
     expect(html).not.toContain('aria-expanded=')
     expect(html).not.toMatch(/<(input|select|textarea)\b/)
+  })
+
+  it('identifies repeated attackers by slot in both ranked results and bars', () => {
+    const html = render(
+      <ComparisonResults results={[
+        { name: 'Same Profile', color: '#f85149', slotNumber: 2, result: result(4) },
+        { name: 'Same Profile', color: '#6b8caf', slotNumber: 1, result: result(2) },
+      ]} />
+    )
+
+    expect(html.match(/role="rowheader"/g)).toHaveLength(2)
+    expect(html).toContain('comparison-result-variant">Attacker 2</span>')
+    expect(html).toContain('comparison-result-variant">Attacker 1</span>')
+    expect(html).toContain('Attacker 2 · Same Profile')
+    expect(html).toContain('Attacker 1 · Same Profile')
+  })
+
+  it('only needs one saved attacker and one saved defender to start selecting variants', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => ({
+        'attackSim:attackerProfiles': JSON.stringify({
+          Shared: { weapons: [makeWeapon()], unitBuffs: null },
+        }),
+        'attackSim:defenderProfiles': JSON.stringify({
+          Target: { targets: [makeTarget()], defenderUnitBuffs: null },
+        }),
+      })[key] ?? null,
+    })
+    const html = render(
+      <MemoryRouter>
+        <ProfileComparison />
+      </MemoryRouter>
+    )
+
+    expect(html).not.toContain('profile-comparison-empty')
+    expect(html.match(/value="Shared"/g)).toHaveLength(2)
+    expect(html).not.toContain('<p>')
+  })
+
+  it.each([
+    ['en', 'Library'],
+    ['zh', '配置库'],
+  ])('uses the shortened %s Library label and omits child Profile counts', (lang, label) => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => ({
+        attackSim_lang: lang,
+        'attackSim:attackerProfiles': JSON.stringify({
+          Squad: { weapons: [makeWeapon(), makeWeapon(), makeWeapon()], unitBuffs: null },
+        }),
+      })[key] ?? null,
+    })
+    const navigation = render(
+      <MemoryRouter>
+        <AttackSimulatorLayout />
+      </MemoryRouter>
+    )
+    const library = render(<ProfileLibrary />)
+
+    expect(navigation).toContain(`>${label}</a>`)
+    expect(library).toContain(`<h2>${label}</h2>`)
+    expect(library).toContain('<span>Squad</span>')
+    expect(library).not.toContain('<small>')
+    expect(library).not.toContain('<p>')
   })
 })

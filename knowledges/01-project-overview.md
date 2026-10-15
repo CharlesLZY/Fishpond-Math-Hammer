@@ -23,7 +23,7 @@ No CSS framework and no backend.
 |---|---|---|
 | `/` and `/attack-simulator` | `AttackSimulator` | Full 40K unit-vs-unit Monte Carlo simulator with profile and unit-wide buffs. |
 | `/attack-simulator/profiles` | `ProfileLibrary` | Manage, edit, import, and export saved 40K Profiles. |
-| `/attack-simulator/compare` | `ProfileComparison` | Compare 2–4 saved attackers against one saved defender. |
+| `/attack-simulator/compare` | `ProfileComparison` | Compare 2–4 attacker variants against one defender, with temporary unit buffs. |
 | `/aos-attack-simulator` | `AoSAttackSimulator` | Streamlined AoS 4E multi-weapon damage simulator. |
 | `/dice-calculator` | `DiceCalculator` | Hosts the 40K Wound Success and AoS Damage calculators. |
 | `/macro-battleplan` | `MacroBattleplan` | Official 11e battleplans with base, drawing, ruler, mission-card, and scoring tools. |
@@ -32,6 +32,14 @@ No CSS framework and no backend.
 | `/about` | `About` | Author / project info and local-storage reset. |
 
 Routing entry point: [App.jsx](../src/App.jsx).
+
+The 40K secondary navigation is **Simulator / Library / Comparison**.
+Comparison may select the same saved attacker in multiple slots. Each slot
+starts with that Profile's saved unit buffs and can adjust them independently;
+the selected defender's unit buffs can also be adjusted. These changes update
+the preview and simulation together without modifying either saved library.
+Changing a selection restores the newly selected Profile's saved buffs.
+Colors and slot labels distinguish repeated Profiles in ranked results.
 
 ## Calculators
 

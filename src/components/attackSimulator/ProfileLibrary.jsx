@@ -337,10 +337,7 @@ export default function ProfileLibrary() {
   return (
     <section className="profile-library-page">
       <header className="attack-sim-section-header profile-page-heading">
-        <div>
-          <h2>{t('profileLibrary')}</h2>
-          <p>Manage and edit reusable 40K attacker and defender Profiles.</p>
-        </div>
+        <h2>{t('profileLibrary')}</h2>
         <div className="profile-library-toolbar">
           <button type="button" className="toolbar-button" onClick={handleNew}>
             <Plus size={14} />
@@ -402,25 +399,17 @@ export default function ProfileLibrary() {
             aria-label={t('searchProfiles')}
           />
           <div className="profile-library-list">
-            {filteredNames.map((name) => {
-              const stored = api.load(name)
-              const count =
-                side === 'attacker'
-                  ? stored?.weapons?.length || 0
-                  : stored?.targets?.length || 0
-              return (
-                <button
-                  type="button"
-                  key={name}
-                  className={`profile-library-list-item${selectedName === name ? ' active' : ''}`}
-                  aria-pressed={selectedName === name}
-                  onClick={() => handleSelect(name)}
-                >
-                  <span>{name}</span>
-                  <small>{count} Profiles</small>
-                </button>
-              )
-            })}
+            {filteredNames.map((name) => (
+              <button
+                type="button"
+                key={name}
+                className={`profile-library-list-item${selectedName === name ? ' active' : ''}`}
+                aria-pressed={selectedName === name}
+                onClick={() => handleSelect(name)}
+              >
+                <span>{name}</span>
+              </button>
+            ))}
             {filteredNames.length === 0 && (
               <div className="profile-library-empty-list">
                 {t('noSavedProfiles')}

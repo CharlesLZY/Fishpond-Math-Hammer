@@ -11,7 +11,7 @@ const translations = {
     editionTooltip: 'Based on Warhammer 40,000 11th Edition rules',
     attackSimulatorSections: 'Attack Simulator sections',
     navSimulator: 'Simulator',
-    navProfileLibrary: 'Profile Library',
+    navProfileLibrary: 'Library',
     navComparison: 'Comparison',
 
     // Profile libraries
@@ -21,7 +21,7 @@ const translations = {
     savedDefenderSets: '— Saved defender profiles —',
     saveProfile: 'Save Profile…',
     updateProfile: 'Update Profile',
-    profileLibrary: 'Profile Library',
+    profileLibrary: 'Library',
     attackerLibrary: 'Attacker Profiles',
     defenderLibrary: 'Defender Profiles',
     searchProfiles: 'Search profiles…',
@@ -36,12 +36,12 @@ const translations = {
     chooseProfileFromList: 'Choose a Profile from the list.',
     noSavedProfiles: 'No saved Profiles yet.',
     comparison: 'Profile Comparison',
-    comparisonDescription: 'Compare 2–4 saved attacker Profiles against one saved defender.',
     comparisonNeedsProfiles: 'Saved Profiles are required for comparison.',
-    comparisonNeedsProfilesHint: 'Save at least two attacker Profiles and one defender Profile.',
+    comparisonNeedsProfilesHint: 'Save at least one attacker Profile and one defender Profile.',
     selectDefender: 'Select Defender Profile',
     attackersToCompare: 'Attackers to Compare',
     selectAttacker: 'Select Attacker Profile',
+    attackerNumber: (n) => `Attacker ${n}`,
     addAttacker: '+ Add Attacker',
     removeAttacker: (n) => `Remove attacker ${n}`,
     runComparison: 'Run Comparison',
@@ -51,8 +51,6 @@ const translations = {
     manageProfiles: 'Manage Profiles',
     expandProfilePreview: 'Show full profile',
     collapseProfilePreview: 'Show less',
-    weaponProfileCount: (n) => `${n} weapon ${n === 1 ? 'profile' : 'profiles'}`,
-    targetProfileCount: (n) => `${n} target ${n === 1 ? 'profile' : 'profiles'}`,
 
     // Sections
     attackerSection: 'Attacker Profiles',
@@ -188,7 +186,7 @@ const translations = {
     editionTooltip: '基于战锤40K 第11版规则',
     attackSimulatorSections: '攻击模拟器页面',
     navSimulator: '模拟器',
-    navProfileLibrary: 'Profile 库',
+    navProfileLibrary: '配置库',
     navComparison: '对比',
 
     // Profile libraries
@@ -198,7 +196,7 @@ const translations = {
     savedDefenderSets: '— 已保存防御方配置 —',
     saveProfile: '保存 Profile…',
     updateProfile: '更新 Profile',
-    profileLibrary: 'Profile 库',
+    profileLibrary: '配置库',
     attackerLibrary: '攻击方 Profiles',
     defenderLibrary: '防御方 Profiles',
     searchProfiles: '搜索 Profiles…',
@@ -213,12 +211,12 @@ const translations = {
     chooseProfileFromList: '从列表中选择一个 Profile。',
     noSavedProfiles: '还没有保存的 Profile。',
     comparison: 'Profile 对比',
-    comparisonDescription: '选择 2–4 个已保存的攻击方 Profile，与同一个防御方进行对比。',
     comparisonNeedsProfiles: '请先保存用于对比的 Profiles。',
-    comparisonNeedsProfilesHint: '至少需要两个攻击方 Profile 和一个防御方 Profile。',
+    comparisonNeedsProfilesHint: '至少需要一个攻击方 Profile 和一个防御方 Profile。',
     selectDefender: '选择防御方 Profile',
     attackersToCompare: '参与对比的攻击方',
     selectAttacker: '选择攻击方 Profile',
+    attackerNumber: (n) => `攻击方 ${n}`,
     addAttacker: '+ 添加攻击方',
     removeAttacker: (n) => `移除攻击方 ${n}`,
     runComparison: '运行对比',
@@ -228,8 +226,6 @@ const translations = {
     manageProfiles: '管理 Profiles',
     expandProfilePreview: '展开完整配置',
     collapseProfilePreview: '收起详情',
-    weaponProfileCount: (n) => `${n} 个武器配置`,
-    targetProfileCount: (n) => `${n} 个目标配置`,
 
     // Sections
     attackerSection: '攻击方面板',

@@ -25,7 +25,7 @@
   border-bottom-color: #fbbf24;
 }
 
-.attack-simulator-page :is(button, a, select):focus-visible {
+.attack-simulator-page :is(button, a, select, summary):focus-visible {
   outline: 2px solid #fbbf24;
   outline-offset: 3px;
 }
@@ -41,14 +41,8 @@
   gap: 20px;
 }
 
-.profile-page-heading > div:first-child {
+.profile-page-heading > h2 {
   min-width: 0;
-}
-
-.profile-page-heading p {
-  margin-top: 5px;
-  color: #999;
-  font-size: 13px;
 }
 
 .profile-library-toolbar,
@@ -111,8 +105,6 @@
 
 .profile-library-list-item {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
   padding: 11px 13px;
   color: #ddd;
   background: transparent;
@@ -139,11 +131,6 @@
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.profile-library-list-item small {
-  color: #888;
-  font-size: 11px;
 }
 
 .profile-library-empty-list {
@@ -267,6 +254,45 @@
   border-top: 3px solid var(--attacker-color);
 }
 
+.comparison-slot-label {
+  margin: 0 0 8px;
+  color: #ccc;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.comparison-unit-buffs {
+  margin-bottom: 10px;
+  padding: 0 10px;
+  background: rgba(244, 185, 66, 0.04);
+  border: 1px solid rgba(244, 185, 66, 0.22);
+  border-radius: 8px;
+}
+
+.comparison-unit-buffs > summary {
+  min-height: 44px;
+  padding: 11px 0;
+  color: #fbbf24;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.comparison-unit-buffs > fieldset {
+  min-width: 0;
+  padding: 4px 0 12px;
+  margin: 0;
+  border: 0;
+}
+
+.comparison-unit-buffs > fieldset:disabled {
+  opacity: 0.6;
+}
+
+.comparison-unit-buffs .unit-buffs-rerolls .reroll-cell {
+  min-width: 0;
+}
+
 .comparison-slot-toolbar {
   display: grid;
   grid-template-columns: 9px minmax(0, 1fr) auto;
@@ -370,7 +396,6 @@
   white-space: nowrap;
 }
 
-.profile-preview-header > span,
 .profile-preview-item-heading small {
   color: #888;
   font-size: 10px;
@@ -499,6 +524,14 @@
 
 .comparison-result-name {
   overflow-wrap: anywhere;
+}
+
+.comparison-result-variant {
+  display: block;
+  margin-top: 4px;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .comparison-bars {
@@ -742,7 +775,6 @@
     overflow-wrap: anywhere;
   }
 
-  .profile-preview-header > span,
   .profile-preview-item-heading small,
   .profile-preview-more {
     font-size: 12px;

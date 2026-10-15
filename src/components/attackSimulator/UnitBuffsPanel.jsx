@@ -22,7 +22,7 @@ const rerollLangKeys = {
   'reroll-non-critical': 'rerollNonCritical',
 }
 
-function UnitBuffsPanel({ value, onChange }) {
+function UnitBuffsPanel({ value, onChange, disabled = false }) {
   const { t } = useT()
   const update = (patch) => onChange({ ...value, ...patch })
 
@@ -117,6 +117,7 @@ function UnitBuffsPanel({ value, onChange }) {
           <label>{t('hitReroll')}</label>
           <div className="reroll-cell-controls">
             <FormSelect
+              isDisabled={disabled}
               options={localizedRerollOptions}
               value={
                 localizedRerollOptions.find(
@@ -131,6 +132,7 @@ function UnitBuffsPanel({ value, onChange }) {
           <label>{t('woundReroll')}</label>
           <div className="reroll-cell-controls">
             <FormSelect
+              isDisabled={disabled}
               options={localizedWoundRerollOptions}
               value={
                 localizedWoundRerollOptions.find(

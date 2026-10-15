@@ -21,7 +21,7 @@
 | `formCard.css` | Shared compact card primitives: `.stat-line`, `.stat-cell`, `.reroll-row`, `.reroll-cell`, `.buff-row`, `.buff-chip*`. |
 | `attackSimulator.css` | Attack Simulator-specific layout and controls: title badge, language toggle, `.profile-card`, `.precision-toggle`, etc. Same dark/amber palette as the rest. |
 | `attackSimulatorProfiles.css` | Profile summaries, unit-buff panels, and buff-dialog layout for the Attack Simulator. |
-| `attackSimulatorPages.css` | Secondary navigation plus Profile Library and Comparison layouts. |
+| `attackSimulatorPages.css` | Secondary navigation plus Library and Comparison layouts. |
 | `diceRoller.css` | Dice Roller-specific actions, tray, face counts, and result sections. |
 | `cheatsheet.css` | Probability table. |
 | `about.css`, `footer.css` | Self-explanatory. |
@@ -50,7 +50,9 @@ belongs in that page's stylesheet.
   scrolling is needed. The run controls remain reachable at the bottom and
   completed comparisons scroll to the results, respecting reduced motion.
 - Compact previews show two weapon/target entries. Their expansion button
-  reveals every entry and buff without enabling editing.
+  reveals every entry and buff without enabling profile-stat editing.
+  A separate collapsible Unit Buffs panel edits the comparison-only buffs;
+  repeated selections have independent panels and stable colors.
 - At 768px and below, `.attack-simulator-page` scopes 44px touch targets and
   16px input text to 40K pages. React-select reads the same control-height
   variable as native inputs. AoS and other pages retain their existing sizes.

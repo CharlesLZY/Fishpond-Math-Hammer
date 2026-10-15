@@ -30,7 +30,7 @@ function SummaryChips({ chips, limit }) {
   )
 }
 
-function ProfilePreviewCard({ name, items, unitChips, countLabel }) {
+function ProfilePreviewCard({ name, items, unitChips }) {
   const { t } = useT()
   const [expanded, setExpanded] = useState(false)
   const contentId = useId()
@@ -44,7 +44,6 @@ function ProfilePreviewCard({ name, items, unitChips, countLabel }) {
     <article className="profile-preview-card">
       <header className="profile-preview-header">
         <strong>{name}</strong>
-        <span>{countLabel}</span>
       </header>
       <div id={contentId} className="profile-preview-content">
         <SummaryChips chips={unitChips} limit={expanded ? Infinity : 4} />
@@ -108,7 +107,6 @@ export function AttackerProfilePreview({ name, profile }) {
       name={name}
       items={items}
       unitChips={buildAttackerUnitBuffSummary(unitBuffs, t)}
-      countLabel={t('weaponProfileCount', weapons.length)}
     />
   )
 }
@@ -139,7 +137,6 @@ export function DefenderProfilePreview({ name, profile }) {
       name={name}
       items={items}
       unitChips={buildDefenderUnitBuffSummary(unitBuffs, t)}
-      countLabel={t('targetProfileCount', targets.length)}
     />
   )
 }
