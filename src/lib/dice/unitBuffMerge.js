@@ -94,6 +94,20 @@ const pickReroll = (weaponMode, unitMode) => {
   return unitMode && unitMode !== 'no-reroll' ? unitMode : (weaponMode || 'no-reroll')
 }
 
+const UNIT_REROLL_RANK = {
+  'no-reroll': 0,
+  'reroll-one': 1,
+  'reroll-one-two': 2,
+  'reroll-fail': 3,
+  'reroll-non-critical': 3,
+}
+
+const mergeUnitReroll = (saved, additional) => {
+  const next = pickReroll(additional, saved)
+  // Failed and non-critical rerolls are alternative strategies; an explicit choice wins their tie.
+  return UNIT_REROLL_RANK[saved] > UNIT_REROLL_RANK[next] ? saved : next
+}
+
 const bestSustained = (a, b) => {
   const ra = SUSTAINED_RANK[a] ?? -1
   const rb = SUSTAINED_RANK[b] ?? -1
@@ -111,9 +125,8 @@ export const mergeUnitBuffs = (saved, additional) => {
       merged[key] = !!(base[key] || extra[key])
     }
   }
-  // Reroll strategies are not ordered; an explicit extra choice takes precedence.
-  merged.hitReroll = pickReroll(extra.hitReroll, base.hitReroll)
-  merged.woundReroll = pickReroll(extra.woundReroll, base.woundReroll)
+  merged.hitReroll = mergeUnitReroll(base.hitReroll, extra.hitReroll)
+  merged.woundReroll = mergeUnitReroll(base.woundReroll, extra.woundReroll)
   merged.sustainedHits = bestSustained(base.sustainedHits || 'off', extra.sustainedHits || 'off')
   if (extra.critHitEnabled) {
     merged.critHit = base.critHitEnabled

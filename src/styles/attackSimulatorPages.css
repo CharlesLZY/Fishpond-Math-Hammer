@@ -339,6 +339,12 @@
   color: #fbbf24;
 }
 
+.comparison-unit-buffs .unit-buff-select__clear-indicator {
+  min-width: var(--form-control-height);
+  min-height: var(--form-control-height);
+  justify-content: center;
+}
+
 .comparison-slot-toolbar {
   display: grid;
   grid-template-columns: 9px minmax(0, 1fr) auto;

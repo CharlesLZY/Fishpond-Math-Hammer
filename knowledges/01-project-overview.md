@@ -37,9 +37,12 @@ The 40K secondary navigation is **Simulator / Library / Comparison**.
 Comparison may select the same saved attacker in multiple slots. Each slot
 shows the saved buffs as a gray, read-only baseline. A separate Additional
 Unit Buffs editor starts empty and edits only that slot's yellow additions;
-the defender uses the same two-layer UI. Extra rerolls override the saved
-unit reroll for this comparison, including upgrades from reroll ones to
-reroll failures. Clearing the extra choice restores the saved reroll.
+the defender uses the same two-layer UI. Reroll selectors offer only actual
+additions and can be cleared; empty selectors automatically keep saved rerolls.
+Unit reroll layers keep the broader coverage (ones, ones/twos, full rerolls)
+so adding reroll ones does not replace saved reroll failures. Failed and
+non-critical rerolls remain alternative strategies: an explicit extra choice
+between them takes precedence. Clearing it restores the saved reroll.
 Other duplicate bonuses do not stack: sustained hits, critical thresholds,
 and defensive reductions use the existing best-effect rules. The preview
 and simulation use the same merged configuration without modifying either

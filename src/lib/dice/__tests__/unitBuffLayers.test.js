@@ -10,7 +10,10 @@ import {
 describe('saved and additional unit buff layers', () => {
   it.each([
     ['reroll-one', 'reroll-fail'],
+    ['reroll-one', 'reroll-one-two'],
+    ['reroll-one-two', 'reroll-fail'],
     ['reroll-one', 'reroll-non-critical'],
+    ['reroll-fail', 'reroll-non-critical'],
     ['reroll-non-critical', 'reroll-fail'],
   ])('uses the extra %s -> %s reroll without changing the saved layer', (savedMode, extraMode) => {
     const saved = Object.freeze(makeUnitBuffs({ hitReroll: savedMode, woundReroll: savedMode }))
@@ -32,6 +35,34 @@ describe('saved and additional unit buff layers', () => {
       woundRerollScope: 'all',
     })
   })
+
+  it.each([
+    ['reroll-one', 'no-reroll'],
+    ['reroll-one-two', 'reroll-one'],
+    ['reroll-fail', 'reroll-one'],
+    ['reroll-fail', 'reroll-one-two'],
+    ['reroll-non-critical', 'reroll-one'],
+    ['reroll-non-critical', 'reroll-one-two'],
+    ['reroll-non-critical', 'no-reroll'],
+  ])('retains saved %s when an extra %s cannot improve its coverage', (savedMode, extraMode) => {
+    const saved = Object.freeze(makeUnitBuffs({ hitReroll: savedMode, woundReroll: savedMode }))
+    const extra = Object.freeze(makeUnitBuffs({ hitReroll: extraMode, woundReroll: extraMode }))
+
+    expect(mergeUnitBuffs(saved, extra)).toEqual(saved)
+    expect(extra.hitReroll).toBe(extraMode)
+    expect(mergeUnitBuffs(saved, makeUnitBuffs())).toEqual(saved)
+  })
+
+  it.each(['reroll-one', 'reroll-one-two', 'reroll-fail', 'reroll-non-critical'])(
+    'handles duplicate %s choices and automatically restores saved buffs when cleared',
+    (mode) => {
+      const saved = Object.freeze(makeUnitBuffs({ hitReroll: mode, woundReroll: mode }))
+      expect(mergeUnitBuffs(saved, saved)).toEqual(saved)
+      expect(mergeUnitBuffs(saved, null)).toEqual(saved)
+      expect(mergeUnitBuffs(saved, undefined)).toEqual(saved)
+      expect(mergeUnitBuffs(null, saved)).toEqual(saved)
+    }
+  )
 
   it('does not stack duplicate bonuses when combining the two layers', () => {
     const saved = Object.freeze(makeUnitBuffs({

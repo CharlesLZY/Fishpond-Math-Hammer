@@ -30,14 +30,14 @@ function UnitBuffsPanel({ value, onChange, disabled = false, additional = false 
     additional && value[key] && value[key] !== 'no-reroll' && 'comparison-buff--added',
   ].filter(Boolean).join(' ')
 
-  const localizedRerollOptions = rerollOptions.map((o) => ({
-    ...o,
-    label: t(additional && o.value === 'no-reroll' ? 'useSavedReroll' : rerollLangKeys[o.value] ?? o.value),
-  }))
-  const localizedWoundRerollOptions = woundRerollOptions.map((o) => ({
-    ...o,
-    label: t(additional && o.value === 'no-reroll' ? 'useSavedReroll' : rerollLangKeys[o.value] ?? o.value),
-  }))
+  const localizeRerollOptions = (options) => options
+    .filter((option) => !additional || option.value !== 'no-reroll')
+    .map((option) => ({
+      ...option,
+      label: t(rerollLangKeys[option.value] ?? option.value),
+    }))
+  const localizedRerollOptions = localizeRerollOptions(rerollOptions)
+  const localizedWoundRerollOptions = localizeRerollOptions(woundRerollOptions)
 
   const buffs = [
     {
@@ -122,43 +122,41 @@ function UnitBuffsPanel({ value, onChange, disabled = false, additional = false 
   return (
     <div className={`unit-buffs-panel${empty ? ' is-empty' : ''}`}>
       <div className="reroll-row unit-buffs-rerolls">
-        <div
-          className={rerollClassName('hitReroll')}
-          title={additional ? t('additionalRerollHint') : undefined}
-        >
+        <div className={rerollClassName('hitReroll')}>
           <label>{t('hitReroll')}</label>
           <div className="reroll-cell-controls">
             <FormSelect
               isDisabled={disabled}
               classNamePrefix="unit-buff-select"
               aria-label={t('hitReroll')}
+              isClearable={additional}
+              placeholder={additional ? t('addReroll') : undefined}
               options={localizedRerollOptions}
               value={
                 localizedRerollOptions.find(
                   (o) => o.value === (value.hitReroll || 'no-reroll')
-                ) || localizedRerollOptions[0]
+                ) || (additional ? null : localizedRerollOptions[0])
               }
-              onChange={(opt) => update({ hitReroll: opt.value })}
+              onChange={(opt) => update({ hitReroll: opt?.value ?? 'no-reroll' })}
             />
           </div>
         </div>
-        <div
-          className={rerollClassName('woundReroll')}
-          title={additional ? t('additionalRerollHint') : undefined}
-        >
+        <div className={rerollClassName('woundReroll')}>
           <label>{t('woundReroll')}</label>
           <div className="reroll-cell-controls">
             <FormSelect
               isDisabled={disabled}
               classNamePrefix="unit-buff-select"
               aria-label={t('woundReroll')}
+              isClearable={additional}
+              placeholder={additional ? t('addReroll') : undefined}
               options={localizedWoundRerollOptions}
               value={
                 localizedWoundRerollOptions.find(
                   (o) => o.value === (value.woundReroll || 'no-reroll')
-                ) || localizedWoundRerollOptions[0]
+                ) || (additional ? null : localizedWoundRerollOptions[0])
               }
-              onChange={(opt) => update({ woundReroll: opt.value })}
+              onChange={(opt) => update({ woundReroll: opt?.value ?? 'no-reroll' })}
             />
           </div>
         </div>

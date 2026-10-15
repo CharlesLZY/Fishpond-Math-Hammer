@@ -58,7 +58,8 @@ belongs in that page's stylesheet.
   Comparison additions are yellow (`#fbbf24`) and remain editable/removable.
   Saved and added buffs occupy separate preview rows so an overridden
   reroll still shows its original gray value beside the new yellow choice.
-  The editor's "Use saved reroll" option removes only the extra override.
+  Extra reroll selectors start unselected, offer only actual reroll buffs,
+  and have a clear action; empty values automatically preserve saved rerolls.
   Simulator and Library buff editors retain their normal editing behavior.
 - At 768px and below, `.attack-simulator-page` scopes 44px touch targets and
   16px input text to 40K pages. React-select reads the same control-height

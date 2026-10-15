@@ -33,12 +33,15 @@ describe('comparison additional-buff editors and read-only origins', () => {
     vi.unstubAllGlobals()
   })
 
-  it('starts the additional editor empty with explicit saved-reroll inheritance', () => {
+  it.each([
+    ['en', 'Add reroll…'],
+    ['zh', '添加重投…'],
+  ])('starts the %s additional reroll selectors empty without an inheritance option', (lang, placeholder) => {
+    vi.stubGlobal('localStorage', { getItem: () => lang })
     const html = render(<UnitBuffsPanel value={makeUnitBuffs()} additional onChange={vi.fn()} />)
-    expect(buttonAttributes(html, 'LETHAL HITS')).toContain('aria-pressed="false"')
-    expect(inputMarkup(html, 'SUSTAINED HITS value')).toBeUndefined()
-    expect(inputMarkup(html, 'Hit Reroll')).not.toContain('disabled=""')
-    expect(html.match(/>Use saved reroll</g)).toHaveLength(2)
+    expect(html.split(`>${placeholder}<`)).toHaveLength(3)
+    expect(html).not.toContain('unit-buff-select__single-value')
+    expect(html).not.toContain('unit-buff-select__clear-indicator')
     expect(html).not.toContain('comparison-buff--saved')
   })
 
@@ -63,6 +66,7 @@ describe('comparison additional-buff editors and read-only origins', () => {
     expect(inputMarkup(html, 'Wound Reroll')).not.toContain('disabled=""')
     expect(html).toContain('reroll-cell comparison-buff--added')
     expect(html).toContain('buff-chip active comparison-buff--added')
+    expect(html).toContain('unit-buff-select__clear-indicator')
   })
 
   it('allows additional defensive choices without displaying the saved layer as editor state', () => {
@@ -100,6 +104,8 @@ describe('comparison additional-buff editors and read-only origins', () => {
     expect(buttonAttributes(defender, 'HALF DAMAGE')).not.toContain('disabled=""')
     expect(attacker + defender).not.toContain('comparison-buff--saved')
     expect(attacker + defender).not.toContain('comparison-buff--added')
+    expect(attacker.match(/>No Reroll</g)).toHaveLength(2)
+    expect(attacker).not.toContain('unit-buff-select__clear-indicator')
   })
 
   it('keeps saved weapon and unit buffs distinct from additions in previews', () => {

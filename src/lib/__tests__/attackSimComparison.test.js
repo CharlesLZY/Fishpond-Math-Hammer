@@ -166,4 +166,30 @@ describe('compareAttackerProfiles', () => {
     expect(results.map(({ result }) => result.expectedKills)).toEqual([2, 3])
     expect(saved.unitBuffs).toEqual({ plusOneDamage: true })
   })
+
+  it('does not reduce simulated output when a weaker reroll is added or cleared', () => {
+    const random = vi.spyOn(Math, 'random')
+    const saved = {
+      ...attacker(4),
+      unitBuffs: { hitReroll: 'reroll-fail', woundReroll: 'reroll-fail' },
+    }
+    const run = (extra) => {
+      let seed = 12345
+      random.mockImplementation(() => {
+        seed = (1664525 * seed + 1013904223) >>> 0
+        return seed / 4294967296
+      })
+      const profile = { ...saved, unitBuffs: mergeUnitBuffs(saved.unitBuffs, extra) }
+      return compareAttackerProfiles(
+        [{ name: 'A', profile }, { name: 'B', profile }],
+        defender,
+        100
+      )
+    }
+
+    const baseline = run(null)
+    expect(run({ hitReroll: 'reroll-one', woundReroll: 'reroll-one-two' })).toEqual(baseline)
+    expect(run({ hitReroll: 'no-reroll', woundReroll: 'no-reroll' })).toEqual(baseline)
+    expect(saved.unitBuffs).toEqual({ hitReroll: 'reroll-fail', woundReroll: 'reroll-fail' })
+  })
 })
