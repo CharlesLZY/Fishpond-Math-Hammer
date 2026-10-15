@@ -112,9 +112,9 @@ describe('Profile comparison presentation', () => {
   })
 
   it.each([
-    ['en', 'Expected Models Killed', 'Chance to Wipe Unit'],
-    ['zh', '预期击杀模型数', '全歼概率'],
-  ])('labels every result metric in %s without a second result tree', (lang, kills, wipe) => {
+    ['en', 'Expected Models Killed', 'Expected Damage Dealt', 'Chance to Wipe Unit'],
+    ['zh', '预期击杀模型数', '预期造成伤害', '全歼概率'],
+  ])('shows only the three result metrics in %s without a second result tree', (lang, kills, damage, wipe) => {
     vi.stubGlobal('localStorage', { getItem: () => lang })
     const html = render(
       <ComparisonResults results={[
@@ -123,14 +123,17 @@ describe('Profile comparison presentation', () => {
       ]} />
     )
 
-    expect(html.match(/data-label=/g)).toHaveLength(8)
+    expect(html.match(/role="columnheader"/g)).toHaveLength(5)
+    expect(html.match(/data-label=/g)).toHaveLength(6)
     expect(html).toContain(`data-label="${kills}"`)
+    expect(html).toContain(`data-label="${damage}"`)
     expect(html).toContain(`data-label="${wipe}"`)
     expect(html.match(/role="table"/g)).toHaveLength(1)
     expect(html.match(/role="rowheader"/g)).toHaveLength(2)
     expect(html).toContain('3.00')
     expect(html).toContain('15.0%')
-    expect(html).toContain('-33.3%')
+    expect(html).toContain('6.00')
+    expect(html).not.toContain('-33.3%')
   })
 
   it('retains each attacker color regardless of result order', () => {

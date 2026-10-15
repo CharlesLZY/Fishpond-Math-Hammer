@@ -52,6 +52,8 @@ Result names append compact English labels for the slot's additional buffs
 the ranking table and chart, regardless of UI language. The suffix is
 captured with the simulation result; saved buffs and stored Profile names
 are unchanged. Colors and slot labels remain available to distinguish variants.
+The comparison table shows rank, attacker, expected kills, expected damage,
+and wipe chance. Its bar chart compares expected kills.
 
 ## Calculators
 

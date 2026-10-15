@@ -411,49 +411,40 @@ export function ComparisonResults({ results }) {
               <th scope="col" role="columnheader">{t('expectedModelsKilled')}</th>
               <th scope="col" role="columnheader">{t('expectedDamageDealt')}</th>
               <th scope="col" role="columnheader">{t('chanceToWipe')}</th>
-              <th scope="col" role="columnheader">{t('vsBest')}</th>
             </tr>
           </thead>
           <tbody role="rowgroup">
-            {results.map(({ name, color, result, slotNumber }, index) => {
-              const delta = bestKills > 0
-                ? ((result.expectedKills - bestKills) / bestKills) * 100
-                : 0
-              return (
-                <tr key={color} role="row" style={{ '--attacker-color': color }}>
-                  <td role="cell" className="comparison-rank">{index + 1}</td>
-                  <th scope="row" role="rowheader" className="comparison-result-name">
-                    <span
-                      className="comparison-color-dot"
-                      style={{ backgroundColor: color }}
-                      aria-hidden="true"
-                    />
-                    {name}
-                    <span className="comparison-result-variant">
-                      {t('attackerNumber', slotNumber)}
-                    </span>
-                  </th>
-                  <td role="cell" data-label={t('expectedModelsKilled')}>
-                    <span className="comparison-metric-value">
-                      <strong>{result.expectedKills.toFixed(2)}</strong>
-                      <small>
-                        95% CI {result.expectedKillsCILow.toFixed(2)}–
-                        {result.expectedKillsCIHigh.toFixed(2)}
-                      </small>
-                    </span>
-                  </td>
-                  <td role="cell" data-label={t('expectedDamageDealt')}>
-                    <span className="comparison-metric-value">{result.expectedDamage.toFixed(2)}</span>
-                  </td>
-                  <td role="cell" data-label={t('chanceToWipe')}>
-                    <span className="comparison-metric-value">{result.wipeProbability.toFixed(1)}%</span>
-                  </td>
-                  <td role="cell" data-label={t('vsBest')}>
-                    <span className="comparison-metric-value">{index === 0 ? '—' : `${delta.toFixed(1)}%`}</span>
-                  </td>
-                </tr>
-              )
-            })}
+            {results.map(({ name, color, result, slotNumber }, index) => (
+              <tr key={color} role="row" style={{ '--attacker-color': color }}>
+                <td role="cell" className="comparison-rank">{index + 1}</td>
+                <th scope="row" role="rowheader" className="comparison-result-name">
+                  <span
+                    className="comparison-color-dot"
+                    style={{ backgroundColor: color }}
+                    aria-hidden="true"
+                  />
+                  {name}
+                  <span className="comparison-result-variant">
+                    {t('attackerNumber', slotNumber)}
+                  </span>
+                </th>
+                <td role="cell" data-label={t('expectedModelsKilled')}>
+                  <span className="comparison-metric-value">
+                    <strong>{result.expectedKills.toFixed(2)}</strong>
+                    <small>
+                      95% CI {result.expectedKillsCILow.toFixed(2)}–
+                      {result.expectedKillsCIHigh.toFixed(2)}
+                    </small>
+                  </span>
+                </td>
+                <td role="cell" data-label={t('expectedDamageDealt')}>
+                  <span className="comparison-metric-value">{result.expectedDamage.toFixed(2)}</span>
+                </td>
+                <td role="cell" data-label={t('chanceToWipe')}>
+                  <span className="comparison-metric-value">{result.wipeProbability.toFixed(1)}%</span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
