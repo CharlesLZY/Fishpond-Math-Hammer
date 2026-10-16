@@ -9,6 +9,8 @@ const rerollShort = {
 const comparisonBuffLabels = {
   hitReroll: 'HitRR',
   woundReroll: 'WoundRR',
+  rerollOneFailedHit: 'HitRR1',
+  rerollOneFailedWound: 'WoundRR1',
   plusOneAttack: '+1A',
   plusOneDamage: '+1D',
   plusOneAp: '+1AP',
@@ -112,8 +114,6 @@ export function buildTargetSummary(profile, upgrades, t) {
   if (profile.fnp) push('fnp', `${t('fnp')} ${profile.fnp}+`)
   if (profile.fnpMortal)
     push('fnpMortal', `${t('fnpMortal')} ${profile.fnpMortal}+`)
-  if (profile.rerollSaveOnes)
-    push('rerollSaveOnes', t('rerollSaveOnes'))
   if (profile.benefitOfCover)
     push('benefitOfCover', t('benefitOfCover'))
   if (profile.minusOneAp) push('minusOneAp', t('minusOneAp'))
@@ -133,7 +133,6 @@ export function buildTargetSummary(profile, upgrades, t) {
     const addUpgrade = (key, label) => {
       if (upgrades[key] && !existing.has(key)) push(key, label)
     }
-    addUpgrade('rerollSaveOnes', t('rerollSaveOnes'))
     addUpgrade('benefitOfCover', t('benefitOfCover'))
     addUpgrade('minusOneAp', t('minusOneAp'))
     addUpgrade('minusOneToHit', t('minusOneHit'))
@@ -170,6 +169,8 @@ export function buildAttackerUnitBuffSummary(unitBuffs, t) {
     null,
     t
   )
+  if (unitBuffs?.rerollOneFailedHit) add('rerollOneFailedHit', t('rerollOneFailedHit'))
+  if (unitBuffs?.rerollOneFailedWound) add('rerollOneFailedWound', t('rerollOneFailedWound'))
   if (unitBuffs?.plusOneAttack) add('plusOneAttack', t('plusOneAttack'))
   if (unitBuffs?.plusOneDamage) add('plusOneDamage', t('plusOneDamage'))
   if (unitBuffs?.plusOneAp) add('plusOneAp', t('plusOneAp'))
@@ -196,7 +197,6 @@ export function buildDefenderUnitBuffSummary(unitBuffs, t) {
   const add = (key, label) => {
     if (unitBuffs?.[key]) chips.push({ key, label })
   }
-  add('rerollSaveOnes', t('rerollSaveOnes'))
   add('benefitOfCover', t('benefitOfCover'))
   add('minusOneAp', t('minusOneAp'))
   add('minusOneToHit', t('minusOneHit'))

@@ -55,11 +55,24 @@ describe('isUnitBuffsEmpty', () => {
     expect(isUnitBuffsEmpty(makeUnitBuffs({ plusOneAp: true }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ lethalHits: true }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ hitReroll: 'reroll-one' }))).toBe(false)
+    expect(isUnitBuffsEmpty(makeUnitBuffs({ rerollOneFailedHit: true }))).toBe(false)
+    expect(isUnitBuffsEmpty(makeUnitBuffs({ rerollOneFailedWound: true }))).toBe(false)
     expect(isUnitBuffsEmpty(makeUnitBuffs({ sustainedHits: '1' }))).toBe(false)
   })
 })
 
 describe('mergeWeaponWithUnit', () => {
+  it('keeps shared single failed rerolls out of weapon profiles and upgrade chips', () => {
+    const unit = makeUnitBuffs({ rerollOneFailedHit: true, rerollOneFailedWound: true })
+    const profile = weapon()
+    const merged = mergeWeaponWithUnit(profile, unit)
+
+    expect(merged).toEqual(profile)
+    expect(merged).not.toHaveProperty('rerollOneFailedHit')
+    expect(merged).not.toHaveProperty('rerollOneFailedWound')
+    expect(describeUpgrades(profile, unit)).toEqual({})
+  })
+
   it('returns weapon unchanged when unit buffs are empty', () => {
     const w = weapon({ lethalHits: true })
     expect(mergeWeaponWithUnit(w, makeUnitBuffs())).toBe(w)
@@ -262,7 +275,6 @@ const target = (overrides = {}) => ({
   invulnSave: 0,
   fnp: 0,
   fnpMortal: 0,
-  rerollSaveOnes: false,
   minusOneToHit: false,
   minusOneToWound: false,
   minusOneToWoundIfStronger: false,
@@ -281,14 +293,21 @@ describe('isTargetUnitBuffsEmpty', () => {
 
   it('detects any active boolean', () => {
     expect(isTargetUnitBuffsEmpty(makeTargetUnitBuffs({ benefitOfCover: true }))).toBe(false)
-    expect(isTargetUnitBuffsEmpty(makeTargetUnitBuffs({ rerollSaveOnes: true }))).toBe(false)
+    expect(isTargetUnitBuffsEmpty(makeTargetUnitBuffs({ minusOneToHit: true }))).toBe(false)
     expect(isTargetUnitBuffsEmpty(makeTargetUnitBuffs({ damageOne: true }))).toBe(false)
+  })
+
+  it('ignores obsolete defensive fields in old profiles', () => {
+    const legacyBuffs = { rerollSaveOnes: true }
+    expect(isTargetUnitBuffsEmpty(legacyBuffs)).toBe(true)
+    expect(mergeTargetWithUnit(target(), legacyBuffs)).toEqual(target())
+    expect(describeTargetUpgrades(target(), legacyBuffs)).toEqual({})
   })
 })
 
 describe('mergeTargetWithUnit', () => {
   it('returns target unchanged when unit buffs are empty', () => {
-    const t = target({ rerollSaveOnes: true })
+    const t = target({ benefitOfCover: true })
     expect(mergeTargetWithUnit(t, makeTargetUnitBuffs())).toEqual(t)
   })
 
@@ -296,13 +315,11 @@ describe('mergeTargetWithUnit', () => {
     const merged = mergeTargetWithUnit(
       target(),
       makeTargetUnitBuffs({
-        rerollSaveOnes: true,
         minusOneToHit: true,
         benefitOfCover: true,
         minusOneAp: true,
       })
     )
-    expect(merged.rerollSaveOnes).toBe(true)
     expect(merged.minusOneToHit).toBe(true)
     expect(merged.benefitOfCover).toBe(true)
     expect(merged.minusOneAp).toBe(true)
@@ -378,9 +395,9 @@ describe('describeTargetUpgrades', () => {
   it('flags newly added booleans', () => {
     const up = describeTargetUpgrades(
       target(),
-      makeTargetUnitBuffs({ rerollSaveOnes: true, benefitOfCover: true })
+      makeTargetUnitBuffs({ minusOneToHit: true, benefitOfCover: true })
     )
-    expect(up.rerollSaveOnes).toBe(true)
+    expect(up.minusOneToHit).toBe(true)
     expect(up.benefitOfCover).toBe(true)
   })
 

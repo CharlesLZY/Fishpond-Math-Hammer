@@ -236,6 +236,9 @@ effective_save = min( modified_armor, target.invuln ?? 7 )
 > always picks the better (lower) — there is no scenario in which it's
 > correct to pick the worse one.
 
+Saving throws use one D6 per attack; the simulator does not provide
+saving-throw re-roll buffs.
+
 ### 4.1 Invulnerable saves
 
 > *"Unlike armour saving throws (which use a model's Save characteristic),
@@ -245,7 +248,7 @@ effective_save = min( modified_armor, target.invuln ?? 7 )
 
 - AP is **ignored** by invuln.
 - Cover **does NOT** apply to invuln.
-- Re-rolls and the +1 cap apply normally.
+- The +1 improvement cap applies normally.
 
 ### 4.2 Benefit of Cover
 
@@ -263,12 +266,6 @@ Three conditions for cover to actually fire:
 
 The +1 stacks with no other save modifiers in this app, so the
 "never improved by more than +1" cap is structurally satisfied.
-
-### 4.3 Save re-rolls
-
-`saveReroll` policy is on the target. Re-roll happens before the AP
-modifier (per universal rule), and the unmodified post-reroll D6 still
-auto-fails on a 1.
 
 ---
 
@@ -383,6 +380,20 @@ The four supported policies (in `REROLL_VALUES`):
 Re-rolls happen **before** modifiers. Code rolls the raw D6, evaluates,
 optionally re-rolls once, evaluates again. A re-rolled die cannot be
 re-rolled.
+
+The simulator also supports two independent unit-only buffs:
+`rerollOneFailedHit` and `rerollOneFailedWound`. Each grants one failed-roll
+reroll for the entire attacking unit, shared across all weapon profiles and
+firing models. Their budgets reset every Monte Carlo trial. They are not
+weapon-profile abilities and duplicate unit-buff layers do not add uses.
+
+For each original die, first use its existing reroll policy if eligible and
+available. Otherwise, a failed roll can use the matching unit opportunity.
+Only then roll the replacement die once. Never feed that result through
+either rule again: a failed 2 rerolled into a 1 does not trigger reroll-ones,
+and a 1 rerolled into another failure cannot spend the unit opportunity.
+The shared opportunity goes to the first eligible failure in weapon order.
+Torrent and Lethal Hits skip their respective rolls without spending a use.
 
 ---
 

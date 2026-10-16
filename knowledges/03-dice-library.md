@@ -53,6 +53,27 @@ Closed-form D6 math.
 `statValue` is the BS/WS/Sv number (e.g. `3` for 3+). `criticalValue` is the
 crit threshold (default 6, can be 5 for "crits on 5+").
 
+### `d6Rerolls.js`
+Shared D6 evaluation and reroll-policy selection for the 40K simulator and
+exact wound-pool calculator. `getD6RollOutcomes` enumerates the original
+die and, if eligible, exactly one replacement. Existing rerolls take priority;
+the returned `usedSingle` flag only spends the separate failed-roll opportunity.
+A replacement result is never fed back through either reroll rule.
+
+### `woundPool.js`
+`calculateWoundPool(options)` computes exact statistics and the full integer
+wound distribution for 1-100 attacks. Options include the usual hit/wound
+thresholds, reroll modes, critical hits, Torrent, Sustained Hits, Lethal Hits,
+Devastating Wounds, ANTI, and `rerollOneFailedHit` / `rerollOneFailedWound`.
+
+Four budget states track the two shared single-roll opportunities. Probability
+mass and weighted first/second moments propagate through every attack and its
+generated hits, so limited rerolls are not treated as independent per-die buffs.
+The result contains numeric means, standard deviations, bounded 95% ranges,
+and `distributionData` in the shared chart shape. The Wound Success Calculator
+uses the same exact calculation with the single-reroll buffs on or off, so
+redundant buff combinations leave all statistics and the distribution unchanged.
+
 ### `aos.js`
 Shared AoS 4E logic for both AoS surfaces.
 
@@ -86,9 +107,9 @@ rolls but still receives per-point Ward rolls.
 
 ### `woundDistribution.js`
 `buildWoundDistribution({ expectedHits, expectedCrits, woundChance, stdDev, lethalHit, expectedWounds })`
-returns the chart data array used by `WoundSuccessCalculator`. Uses a ±3σ
-window. When `lethalHit` is true, crits auto-wound and are added on top of
-the binomial computed over non-crit hits.
+is a legacy binomial approximation retained in the dice API. It uses a ±3σ
+window; when `lethalHit` is true, mean crits are treated as guaranteed wounds.
+`WoundSuccessCalculator` now uses the exact `calculateWoundPool` distribution.
 
 ### `simulation.js`
 `simulateKillProbability(numAttacks, damage, numTargetModels, modelWounds, armorSave, fnp, saveRerollValue, numSimulations = 10000)`
@@ -131,7 +152,7 @@ Used by the Dice Roller page. Pure (apart from `Math.random`).
 ### `attackSimulation.js`
 Full-attack-sequence Monte Carlo engine for the 40K Attack Simulator.
 
-`simulateAttack(weapons, targetProfiles, numSimulations = DEFAULT_SIMULATIONS)`
+`simulateAttack(weapons, targetProfiles, numSimulations = DEFAULT_SIMULATIONS, unitBuffs = {})`
 returns:
 - `expectedKills`, `expectedKillsStdDev`, `expectedKillsCILow/High`
 - `expectedDamage`, `expectedDamageStdDev`, `expectedDamageCILow/High`
@@ -143,6 +164,16 @@ returns:
 Weapons accept `attacks` and `damage` as **dice expressions** parsed by
 `diceExpression.js` (e.g. `4`, `D6`, `D3+3`, `2D6-1`). `modelsFiring` is the
 weapons-count multiplier — each weapon rolls its attack dice independently.
+
+Pass raw weapon profiles and the attacking unit's buffs separately. The engine
+merges per-weapon grants once before running trials. The unit-only flags
+`rerollOneFailedHit` and `rerollOneFailedWound` each grant one failed-roll
+reroll shared across every weapon and firing model in a trial, not one per
+weapon profile. Budgets reset each trial and remain independent of one another.
+Existing eligible rerolls take priority without spending the shared budget.
+A rerolled die is never eligible for another reroll, regardless of its new face.
+The shared opportunity is used on the first otherwise-unrerollable failure
+in weapon display order; it is not reserved for a later, higher-damage weapon.
 
 Key rules implemented (see 08-glossary.md for vocabulary):
 - 10e wound-roll table from S vs T (`woundThresholdFromST`).

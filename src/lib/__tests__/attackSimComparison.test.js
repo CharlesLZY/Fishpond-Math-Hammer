@@ -38,6 +38,52 @@ describe('compareAttackerProfiles', () => {
     vi.restoreAllMocks()
   })
 
+  it.each([
+    {
+      stage: 'hit',
+      flag: 'rerollOneFailedHit',
+      policy: 'hitReroll',
+      overrides: { toHit: 4, critHitEnabled: true, critHit: 4, lethalHits: true },
+    },
+    {
+      stage: 'wound',
+      flag: 'rerollOneFailedWound',
+      policy: 'woundReroll',
+      overrides: { torrent: true },
+    },
+  ])('passes independent shared $stage rerolls to every comparison variant', ({ flag, policy, overrides }) => {
+    const random = vi.spyOn(Math, 'random').mockImplementation(() => {
+      throw new Error('Unexpected extra dice roll')
+    })
+    for (const face of [1, 2, 2, 6, 1, 2, 2, 6, 1, 2, 2]) {
+      random.mockReturnValueOnce((face - 0.5) / 6)
+    }
+    const profile = {
+      weapons: [
+        { ...attacker(4).weapons[0], attacks: '1', ...overrides },
+        { ...attacker(4).weapons[0], attacks: '1', ...overrides },
+      ],
+      unitBuffs: { [flag]: true, [policy]: 'reroll-one' },
+    }
+    const snapshot = structuredClone(profile)
+    const results = compareAttackerProfiles(
+      [
+        { name: 'Enabled A', profile },
+        { name: 'Enabled B', profile },
+        {
+          name: 'Disabled',
+          profile: { ...profile, unitBuffs: { ...profile.unitBuffs, [flag]: false } },
+        },
+      ],
+      { ...defender, targets: [{ ...defender.targets[0], wounds: 1, save: 6 }] },
+      1
+    )
+
+    expect(results.map(({ result }) => result.expectedDamage)).toEqual([1, 1, 0])
+    expect(random).toHaveBeenCalledTimes(11)
+    expect(profile).toEqual(snapshot)
+  })
+
   it('compares between two and four saved attacker Profiles', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5)
 

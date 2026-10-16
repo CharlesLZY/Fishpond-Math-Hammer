@@ -46,7 +46,6 @@ const target = (overrides = {}) => ({
   invulnSave: 0,
   fnp: 0,
   fnpMortal: 0,
-  rerollSaveOnes: false,
   minusOneToHit: false,
   minusOneToWound: false,
   minusOneToWoundIfStronger: false,
@@ -61,6 +60,8 @@ const target = (overrides = {}) => ({
 const attackerUnitBuffs = (overrides = {}) => ({
   hitReroll: 'no-reroll',
   woundReroll: 'no-reroll',
+  rerollOneFailedHit: false,
+  rerollOneFailedWound: false,
   plusOneAttack: false,
   plusOneDamage: false,
   plusOneAp: false,
@@ -76,7 +77,6 @@ const attackerUnitBuffs = (overrides = {}) => ({
 })
 
 const defenderUnitBuffs = (overrides = {}) => ({
-  rerollSaveOnes: false,
   minusOneToHit: false,
   minusOneToWound: false,
   minusOneToWoundIfStronger: false,
@@ -160,7 +160,6 @@ describe('buildAttackSimReport', () => {
         target({
           fnp: 5,
           fnpMortal: 4,
-          rerollSaveOnes: true,
           minusOneToHit: true,
           minusOneToWound: true,
           minusOneToWoundIfStronger: true,
@@ -176,7 +175,6 @@ describe('buildAttackSimReport', () => {
     const expected = [
       'fnp 5+',
       'fnpMortal 4+',
-      'rerollSaveOnes',
       'minusOneHit',
       'minusOneWound',
       'minusOneWoundST',
@@ -192,7 +190,6 @@ describe('buildAttackSimReport', () => {
   it('includes every defender unit buff', () => {
     const report = build({
       defenderBuffs: defenderUnitBuffs({
-        rerollSaveOnes: true,
         minusOneToHit: true,
         minusOneToWound: true,
         minusOneToWoundIfStronger: true,
@@ -205,7 +202,6 @@ describe('buildAttackSimReport', () => {
     })
 
     const expected = [
-      '- rerollSaveOnes',
       '- minusOneHit',
       '- minusOneWound',
       '- minusOneWoundST',
@@ -218,11 +214,20 @@ describe('buildAttackSimReport', () => {
     expected.forEach((entry) => expect(report).toContain(entry))
   })
 
+  it('ignores obsolete defensive fields in old profiles', () => {
+    expect(build({
+      targets: [target({ rerollSaveOnes: true })],
+      defenderBuffs: defenderUnitBuffs({ rerollSaveOnes: true }),
+    })).toBe(build())
+  })
+
   it('includes every attacker unit buff', () => {
     const report = build({
       unitBuffs: attackerUnitBuffs({
         hitReroll: 'reroll-fail',
         woundReroll: 'reroll-non-critical',
+        rerollOneFailedHit: true,
+        rerollOneFailedWound: true,
         plusOneAttack: true,
         plusOneDamage: true,
         plusOneAp: true,
@@ -238,6 +243,8 @@ describe('buildAttackSimReport', () => {
     })
 
     const expected = [
+      '- rerollOneFailedHit',
+      '- rerollOneFailedWound',
       '- hitReroll: rerollFails',
       '- woundReroll: rerollNonCritical',
       '- plusOneAttack',
@@ -253,4 +260,15 @@ describe('buildAttackSimReport', () => {
     ]
     expected.forEach((entry) => expect(report).toContain(entry))
   })
+
+  it.each(['rerollOneFailedHit', 'rerollOneFailedWound'])(
+    'reports a standalone %s only in the unit-buff section',
+    (flag) => {
+      const report = build({ unitBuffs: attackerUnitBuffs({ [flag]: true }) })
+      const [profiles, buffs] = report.split('### unitBuffsSection')
+
+      expect(profiles).not.toContain(flag)
+      expect(buffs).toContain(`- ${flag}`)
+    }
+  )
 })

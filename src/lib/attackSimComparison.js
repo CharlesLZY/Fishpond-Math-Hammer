@@ -1,6 +1,5 @@
 import {
   mergeTargetWithUnit,
-  mergeWeaponWithUnit,
   simulateAttack,
 } from './dice'
 import {
@@ -26,12 +25,9 @@ export function compareAttackerProfiles(
   return attackers.map(({ name, profile }) => {
     if (!profile) throw new Error(`Could not load attacker Profile "${name}".`)
     const attacker = hydrateAttackerProfile(profile)
-    const effectiveWeapons = attacker.weapons.map((weapon) =>
-      mergeWeaponWithUnit(weapon, attacker.unitBuffs)
-    )
     return {
       name,
-      result: simulateAttack(effectiveWeapons, effectiveTargets, iterations),
+      result: simulateAttack(attacker.weapons, effectiveTargets, iterations, attacker.unitBuffs),
     }
   })
 }

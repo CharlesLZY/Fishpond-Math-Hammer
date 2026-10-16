@@ -1,6 +1,6 @@
 // Defender-side unit-wide buff panel. Mirrors UnitBuffsPanel on the
 // attacker side, but with defensive auras/stratagems (Armor of Contempt,
-// Smokescreen, benefit of cover, Reroll Save 1s, ...).
+// Smokescreen, benefit of cover, ...).
 //
 // FNP / FNP-vs-Mortal are intentionally left per-target — they're intrinsic
 // to a model type, not a unit-wide aura in practice.
@@ -14,12 +14,6 @@ function DefenderUnitBuffsPanel({ value, onChange, disabled = false, additional 
   const update = (patch) => onChange({ ...value, ...patch })
 
   const buffs = [
-    {
-      key: 'rerollSaveOnes',
-      label: t('rerollSaveOnes'),
-      active: !!value.rerollSaveOnes,
-      onToggle: () => update({ rerollSaveOnes: !value.rerollSaveOnes }),
-    },
     {
       key: 'benefitOfCover',
       label: t('benefitOfCover'),

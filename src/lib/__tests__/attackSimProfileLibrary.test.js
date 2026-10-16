@@ -7,6 +7,7 @@ import {
   parseAttackerProfileLibrary,
   parseDefenderProfileLibrary,
 } from '../attackSimProfileLibrary'
+import { hydrateAttackerProfile, serializeAttackerProfile } from '../attackSimProfiles'
 
 const weapon = {
   id: 10,
@@ -37,6 +38,29 @@ const targetWithoutId = { ...target }
 delete targetWithoutId.id
 
 describe('Attack Simulator profile-library transfer', () => {
+  it('round-trips shared rerolls as unit buffs rather than weapon-profile abilities', () => {
+    const unitBuffs = Object.freeze({
+      hitReroll: 'reroll-one',
+      woundReroll: 'reroll-one',
+      rerollOneFailedHit: true,
+      rerollOneFailedWound: true,
+    })
+    const library = parseAttackerProfileLibrary(buildAttackerProfileLibraryExport({
+      Squad: { weapons: [weapon], unitBuffs },
+    }))
+    const hydrated = hydrateAttackerProfile(library.Squad)
+    const serialized = serializeAttackerProfile(hydrated)
+
+    expect(hydrated.unitBuffs).toMatchObject(unitBuffs)
+    expect(serialized.unitBuffs).toMatchObject(unitBuffs)
+    expect(serialized.weapons[0]).not.toHaveProperty('rerollOneFailedHit')
+    expect(serialized.weapons[0]).not.toHaveProperty('rerollOneFailedWound')
+    expect(hydrateAttackerProfile({ weapons: [weapon] }).unitBuffs).toMatchObject({
+      rerollOneFailedHit: false,
+      rerollOneFailedWound: false,
+    })
+  })
+
   it('builds and parses an attacker profile library', () => {
     const payload = buildAttackerProfileLibraryExport({
       Infantry: {

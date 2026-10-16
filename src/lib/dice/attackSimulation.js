@@ -3,7 +3,7 @@
 // Models the standard sequence per attack:
 //   1. Hit roll (with optional torrent / -1 to hit / benefit of cover / rerolls / lethal hits / sustained hits)
 //   2. Wound roll (S vs T table, with optional -1 wound mods / rerolls / anti-X / devastating wounds)
-//   3. Save roll (best of armor save modified by AP and invuln save; reroll 1s optional)
+//   3. Save roll (best of armor save modified by AP and invuln save)
 //   4. Damage allocation (with -1 damage / half damage; per-point FNP; mortal-FNP for dev wounds)
 //
 // Multiple weapon profiles fire in user-defined order. Multiple target profiles
@@ -22,6 +22,8 @@
 
 import { DEFAULT_SIMULATIONS, Z_95, REROLL_VALUES, REROLL_SCOPE, randomRerollThreshold } from './constants'
 import { parseDiceExpression, rollDiceExpr, rollDiceExprWithReroll } from './diceExpression'
+import { mergeWeaponWithUnit } from './unitBuffMerge'
+import { evaluateD6, shouldRerollD6 } from './d6Rerolls'
 
 // ---- helpers ---------------------------------------------------------------
 
@@ -42,31 +44,30 @@ const woundThresholdFromST = (S, T) => {
 //   critThreshold: natural value at/above which the roll counts as a critical
 //                  success (default 6). Critical successes always succeed
 //                  (per 11e rules). Natural 1 always fails.
-const rollD6WithReroll = (threshold, rerollMode, critThreshold = 6, budget = null) => {
+const rollD6WithReroll = (
+  threshold,
+  rerollMode,
+  critThreshold = 6,
+  budget = null,
+  singleFailedBudget = null
+) => {
   const doRoll = () => Math.floor(Math.random() * 6) + 1
 
-  const evaluate = (nat) => {
-    if (nat === 1) return { success: false, isCrit: false }
-    const isCrit = nat >= critThreshold
-    // Critical roll auto-succeeds; otherwise needs to meet the modified threshold
-    // (with natural 6 also being an auto-success).
-    const success = isCrit || nat === 6 || nat >= threshold
-    return { success, isCrit }
-  }
+  const evaluate = (nat) => evaluateD6(nat, threshold, critThreshold)
 
   let nat = doRoll()
   let { success, isCrit } = evaluate(nat)
 
-  const shouldReroll = (() => {
-    if (rerollMode === REROLL_VALUES.REROLL_ONE) return nat === 1
-    if (rerollMode === REROLL_VALUES.REROLL_ONE_TWO) return nat <= 2 && !isCrit
-    if (rerollMode === REROLL_VALUES.REROLL_FAIL) return !success
-    if (rerollMode === REROLL_VALUES.REROLL_NON_CRITICAL) return !isCrit
-    return false
-  })()
+  const shouldReroll = shouldRerollD6(nat, rerollMode, success, isCrit)
 
-  if (shouldReroll && (!budget || budget.remaining > 0)) {
-    if (budget) budget.remaining -= 1
+  const policyReroll = shouldReroll && (!budget || budget.remaining > 0)
+  const singleFailedReroll =
+    !policyReroll && !success && singleFailedBudget?.remaining > 0
+
+  // Choose one source from the original roll; never reconsider its rerolled result.
+  if (policyReroll || singleFailedReroll) {
+    const usedBudget = policyReroll ? budget : singleFailedBudget
+    if (usedBudget) usedBudget.remaining -= 1
     nat = doRoll()
     ;({ success, isCrit } = evaluate(nat))
   }
@@ -137,7 +138,13 @@ const modifyDamage = (rawDamage, halfDamage, minusOneDamage, damageOne) => {
 
 // ---- single-trial attack resolution ----------------------------------------
 
-const resolveWeaponAgainstUnit = (weapon, unitState, blastBaseModels, deferredDevWounds) => {
+const resolveWeaponAgainstUnit = (
+  weapon,
+  unitState,
+  blastBaseModels,
+  deferredDevWounds,
+  unitRerollBudgets
+) => {
   const attacksParsed = parseDiceExpression(weapon.attacks)
   const damageParsed = parseDiceExpression(weapon.damage)
   if (!attacksParsed || !damageParsed) return 0
@@ -238,7 +245,9 @@ const resolveWeaponAgainstUnit = (weapon, unitState, blastBaseModels, deferredDe
       const coverPenalty = target.benefitOfCover && !weapon.ignoresCover ? 1 : 0
       const hitThr = clampThreshold(weapon.toHit + coverPenalty + hitMod)
       const critHitThr = weapon.critHitEnabled && weapon.critHit ? weapon.critHit : 6
-      const hr = rollD6WithReroll(hitThr, weapon.hitReroll, critHitThr, hitBudget)
+      const hr = rollD6WithReroll(
+        hitThr, weapon.hitReroll, critHitThr, hitBudget, unitRerollBudgets.hit
+      )
       if (!hr.success) continue
       hitIsCrit = hr.isCrit
     }
@@ -282,7 +291,10 @@ const resolveWeaponAgainstUnit = (weapon, unitState, blastBaseModels, deferredDe
           baseThr = Math.min(baseThr, weapon.antiValue)
         }
         const woundThr = clampThreshold(baseThr + mod)
-        const wr = rollD6WithReroll(woundThr, weapon.woundReroll, clampThreshold(critWoundThr), woundBudget)
+        const wr = rollD6WithReroll(
+          woundThr, weapon.woundReroll, clampThreshold(critWoundThr),
+          woundBudget, unitRerollBudgets.wound
+        )
         if (!wr.success) continue
         woundIsCrit = wr.isCrit
       }
@@ -308,11 +320,7 @@ const resolveWeaponAgainstUnit = (weapon, unitState, blastBaseModels, deferredDe
       const invuln = (t.invulnSave && t.invulnSave >= 2 && t.invulnSave <= 6) ? t.invulnSave : 7
       const effSave = Math.min(armorMod, invuln)
       if (effSave <= 6) {
-        // Save reroll is a simple buff: when `rerollSaveOnes` is set the
-        // defender rerolls every natural 1 on the save die (aura/banner-style
-        // ability). No budget — these effects fire on every die.
-        const saveRerollMode = t.rerollSaveOnes ? REROLL_VALUES.REROLL_ONE : REROLL_VALUES.NO_REROLL
-        const sr = rollD6WithReroll(effSave, saveRerollMode, 7) // crit doesn't apply to saves
+        const sr = rollD6WithReroll(effSave, REROLL_VALUES.NO_REROLL, 7) // crit doesn't apply to saves
         if (sr.success) continue
       }
 
@@ -350,7 +358,13 @@ const buildUnitState = (targetProfiles) => ({
 
 // ---- public entry ----------------------------------------------------------
 
-export const simulateAttack = (weapons, targetProfiles, numSimulations = DEFAULT_SIMULATIONS) => {
+export const simulateAttack = (
+  weapons,
+  targetProfiles,
+  numSimulations = DEFAULT_SIMULATIONS,
+  unitBuffs = {}
+) => {
+  const effectiveWeapons = weapons.map((weapon) => mergeWeaponWithUnit(weapon, unitBuffs))
   const totalModels = targetProfiles.reduce((s, p) => s + (p.models || 0), 0)
 
   const totalKillsPerTrial = []
@@ -359,6 +373,10 @@ export const simulateAttack = (weapons, targetProfiles, numSimulations = DEFAULT
 
   for (let sim = 0; sim < numSimulations; sim++) {
     const state = buildUnitState(targetProfiles)
+    const unitRerollBudgets = {
+      hit: { remaining: unitBuffs?.rerollOneFailedHit ? 1 : 0 },
+      wound: { remaining: unitBuffs?.rerollOneFailedWound ? 1 : 0 },
+    }
     // Snapshot of the target unit's size at "target selection" — used by
     // Blast for every weapon this trial regardless of resolution order.
     const blastBaseModels = totalModels
@@ -367,9 +385,11 @@ export const simulateAttack = (weapons, targetProfiles, numSimulations = DEFAULT
     // Devastating Wounds attacks are buffered here and resolved AFTER all
     // weapons (the "attacking unit") have fired, per 11e RAW.
     const deferredDevWounds = []
-    for (const w of weapons) {
+    for (const w of effectiveWeapons) {
       if (state.activeProfile >= state.profiles.length) break
-      damageThisTrial += resolveWeaponAgainstUnit(w, state, blastBaseModels, deferredDevWounds)
+      damageThisTrial += resolveWeaponAgainstUnit(
+        w, state, blastBaseModels, deferredDevWounds, unitRerollBudgets
+      )
     }
 
     // Drain deferred DW attacks. Each one inflicts mortal wounds equal to its

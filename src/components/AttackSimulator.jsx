@@ -4,7 +4,6 @@ import {
   simulateAttack,
   isValidDiceExpression,
   makeUnitBuffs,
-  mergeWeaponWithUnit,
   makeTargetUnitBuffs,
   mergeTargetWithUnit,
 } from '../lib/dice'
@@ -207,15 +206,10 @@ function AttackSimulator() {
     }
     setRunning(true)
     const iterations = highPrecision ? 10000 : 1000
-    // Merge unit-wide buffs into each weapon profile before simulation.
-    // The merge takes the best of weapon-level vs unit-level for every buff,
-    // so a weapon's intrinsic SUSTAINED 1 plus a unit-granted SUSTAINED 2
-    // resolves as SUSTAINED 2 (not 1+2=3) — see lib/dice/unitBuffMerge.js.
-    const effectiveWeapons = weapons.map((w) => mergeWeaponWithUnit(w, unitBuffs))
     const effectiveTargets = targets.map((tg) => mergeTargetWithUnit(tg, defenderUnitBuffs))
     setTimeout(() => {
       try {
-        const res = simulateAttack(effectiveWeapons, effectiveTargets, iterations)
+        const res = simulateAttack(weapons, effectiveTargets, iterations, unitBuffs)
         setResult({ ...res, calculationId: Date.now() })
       } catch (err) {
         setError(err.message || 'Simulation failed.')

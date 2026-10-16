@@ -98,6 +98,8 @@ const translations = {
 
     // Unit buffs
     unitBuffsSection: 'Unit Buffs',
+    rerollOneFailedHit: 'REROLL ONE HIT',
+    rerollOneFailedWound: 'REROLL ONE WOUND',
     noUnitBuffs: 'No unit buffs.',
     unitUpgradedTag: 'Upgraded by unit buff',
     unitGrantedTag: 'Granted by unit buff',
@@ -183,12 +185,10 @@ const translations = {
     wounds: 'Wounds',
     sv: 'Sv',
     inv: 'Inv',
-    saveReroll: 'Save Reroll',
 
     // Target buff chips
     fnp: 'FNP',
     fnpMortal: 'FNP vs MORTAL',
-    rerollSaveOnes: 'REROLL SAVE 1',
     minusOneHit: '−1 HIT',
     minusOneWound: '−1 WOUND',
     minusOneWoundST: '−1 WOUND (S>T)',
@@ -311,6 +311,8 @@ const translations = {
 
     // Unit buffs
     unitBuffsSection: '单位加成',
+    rerollOneFailedHit: '重投一颗命中',
+    rerollOneFailedWound: '重投一颗造伤',
     noUnitBuffs: '当前没有启用任何单位加成。',
     unitUpgradedTag: '由单位加成强化',
     unitGrantedTag: '由单位加成提供',
@@ -394,12 +396,10 @@ const translations = {
     wounds: '血量',
     sv: '保护',
     inv: '特保',
-    saveReroll: '保护重投',
 
     // Target buff chips
     fnp: '不怕疼',
     fnpMortal: '对致命伤不怕疼',
-    rerollSaveOnes: '保护重投1',
     minusOneHit: '−1 命中',
     minusOneWound: '−1 造伤',
     minusOneWoundST: '−1 造伤 (S>T)',

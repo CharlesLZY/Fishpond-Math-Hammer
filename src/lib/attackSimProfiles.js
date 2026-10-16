@@ -53,7 +53,6 @@ export const makeTarget = (overrides = {}) => ({
   invulnSave: 0,
   fnp: 0,
   fnpMortal: 0,
-  rerollSaveOnes: false,
   minusOneToHit: false,
   minusOneToWound: false,
   minusOneToWoundIfStronger: false,

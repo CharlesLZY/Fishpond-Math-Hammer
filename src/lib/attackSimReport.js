@@ -76,6 +76,8 @@ const describeWeapon = (weapon, t) => {
 
 const describeUnitBuffs = (unitBuffs, t) => {
   const parts = []
+  if (unitBuffs.rerollOneFailedHit) parts.push(t('rerollOneFailedHit'))
+  if (unitBuffs.rerollOneFailedWound) parts.push(t('rerollOneFailedWound'))
   if (unitBuffs.plusOneAttack) parts.push(t('plusOneAttack'))
   if (unitBuffs.plusOneDamage) parts.push(t('plusOneDamage'))
   if (unitBuffs.plusOneAp) parts.push(t('plusOneAp'))
@@ -111,7 +113,6 @@ const describeUnitBuffs = (unitBuffs, t) => {
 
 const describeDefenderUnitBuffs = (unitBuffs, t) => {
   const parts = []
-  if (unitBuffs.rerollSaveOnes) parts.push(t('rerollSaveOnes'))
   if (unitBuffs.benefitOfCover) parts.push(t('benefitOfCover'))
   if (unitBuffs.minusOneAp) parts.push(t('minusOneAp'))
   if (unitBuffs.minusOneToHit) parts.push(t('minusOneHit'))
@@ -136,7 +137,6 @@ const describeTarget = (target, t) => {
   if (target.fnpMortal > 0) {
     buffs.push(`${t('fnpMortal')} ${target.fnpMortal}+`)
   }
-  if (target.rerollSaveOnes) buffs.push(t('rerollSaveOnes'))
   if (target.minusOneToHit) buffs.push(t('minusOneHit'))
   if (target.minusOneToWound) buffs.push(t('minusOneWound'))
   if (target.minusOneToWoundIfStronger) {

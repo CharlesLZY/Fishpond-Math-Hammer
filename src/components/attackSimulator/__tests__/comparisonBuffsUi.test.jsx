@@ -4,9 +4,17 @@ import { makeTargetUnitBuffs, makeUnitBuffs, mergeTargetUnitBuffs, mergeUnitBuff
 import { makeTarget, makeWeapon } from '../../../lib/attackSimProfiles'
 import { LangProvider } from '../../attackSim/lang'
 import UnitBuffsPanel from '../UnitBuffsPanel'
+import WeaponBuffsEditor from '../WeaponBuffsEditor'
 import DefenderUnitBuffsPanel from '../DefenderUnitBuffsPanel'
+import TargetBuffsEditor from '../TargetBuffsEditor'
 import { AttackerProfilePreview, DefenderProfilePreview } from '../ProfilePreview'
-import { buildComparisonProfileName } from '../profileSummaries'
+import {
+  buildComparisonProfileName,
+  buildAttackerUnitBuffSummary,
+  buildDefenderUnitBuffSummary,
+  buildTargetSummary,
+  buildWeaponSummary,
+} from '../profileSummaries'
 
 const render = (content) =>
   renderToStaticMarkup(<LangProvider>{content}</LangProvider>)
@@ -27,6 +35,8 @@ const chipOrigins = (html, label) =>
 
 describe('comparison Profile names', () => {
   it.each([
+    ['rerollOneFailedHit', 'HitRR1'],
+    ['rerollOneFailedWound', 'WoundRR1'],
     ['plusOneAttack', '+1A'],
     ['plusOneDamage', '+1D'],
     ['plusOneAp', '+1AP'],
@@ -44,6 +54,8 @@ describe('comparison Profile names', () => {
     const extra = Object.freeze(makeUnitBuffs({
       hitReroll: 'reroll-fail',
       woundReroll: 'reroll-one-two',
+      rerollOneFailedHit: true,
+      rerollOneFailedWound: true,
       plusOneAttack: true,
       plusOneDamage: true,
       plusOneAp: true,
@@ -58,7 +70,7 @@ describe('comparison Profile names', () => {
     }))
 
     expect(buildComparisonProfileName('Squad', extra)).toBe(
-      'Squad HitRR: Fails WoundRR: Ones and Twos +1A +1D +1AP +1Hit +1Wound LethalHits DevWounds Sustained D3 CritHit 4+ IgnoresCover'
+      'Squad HitRR: Fails WoundRR: Ones and Twos HitRR1 WoundRR1 +1A +1D +1AP +1Hit +1Wound LethalHits DevWounds Sustained D3 CritHit 4+ IgnoresCover'
     )
   })
 
@@ -107,6 +119,75 @@ describe('comparison additional-buff editors and read-only origins', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it.each([
+    ['en', 'REROLL ONE HIT', 'REROLL ONE WOUND'],
+    ['zh', '重投一颗命中', '重投一颗造伤'],
+  ])('offers shared failed rerolls only in the %s unit editor and unit summaries', (
+    lang, hitLabel, woundLabel
+  ) => {
+    vi.stubGlobal('localStorage', { getItem: () => lang })
+    const unitBuffs = makeUnitBuffs({
+      hitReroll: 'reroll-one',
+      woundReroll: 'reroll-one',
+      rerollOneFailedHit: true,
+      rerollOneFailedWound: true,
+    })
+    const active = render(<UnitBuffsPanel value={unitBuffs} additional onChange={vi.fn()} />)
+    const empty = render(<UnitBuffsPanel value={makeUnitBuffs()} onChange={vi.fn()} />)
+    const disabled = render(<UnitBuffsPanel value={unitBuffs} disabled onChange={vi.fn()} />)
+    const weapon = render(<WeaponBuffsEditor profile={makeWeapon()} onChange={vi.fn()} />)
+
+    for (const label of [hitLabel, woundLabel]) {
+      expect(buttonAttributes(active, label)).toContain('aria-pressed="true"')
+      expect(buttonAttributes(active, label)).not.toContain('disabled=""')
+      expect(buttonAttributes(empty, label)).toContain('aria-pressed="false"')
+      expect(buttonAttributes(disabled, label)).toContain('disabled=""')
+      expect(weapon).not.toContain(label)
+    }
+    expect(active).toContain('buff-chip active comparison-buff--added')
+    expect(active).not.toContain('unit-buffs-hint')
+    expect(buildAttackerUnitBuffSummary(unitBuffs, (key) => key).map(({ key }) => key))
+      .toContain('rerollOneFailedHit')
+    expect(buildWeaponSummary(makeWeapon(), null, (key) => key)).toEqual([])
+
+    const saved = {
+      weapons: [makeWeapon(), makeWeapon()],
+      unitBuffs: makeUnitBuffs({ rerollOneFailedHit: true }),
+    }
+    const extra = makeUnitBuffs({ rerollOneFailedWound: true })
+    const preview = render(
+      <AttackerProfilePreview
+        name="Squad"
+        profile={{ ...saved, unitBuffs: mergeUnitBuffs(saved.unitBuffs, extra) }}
+        savedProfile={saved}
+        extraUnitBuffs={extra}
+      />
+    )
+    expect(chipOrigins(preview, hitLabel)).toEqual(['saved'])
+    expect(chipOrigins(preview, woundLabel)).toEqual(['added'])
+  })
+
+  it.each([
+    ['en', 'REROLL SAVE 1'],
+    ['zh', '保护重投1'],
+  ])('omits the removed save buff from every %s defender editor and summary', (lang, removedLabel) => {
+    vi.stubGlobal('localStorage', { getItem: () => lang })
+    const legacyTarget = makeTarget({ rerollSaveOnes: true })
+    const legacyBuffs = makeTargetUnitBuffs({ rerollSaveOnes: true })
+    const html = render(
+      <>
+        <TargetBuffsEditor profile={legacyTarget} onChange={vi.fn()} />
+        <DefenderUnitBuffsPanel value={legacyBuffs} onChange={vi.fn()} />
+        <DefenderUnitBuffsPanel value={legacyBuffs} additional onChange={vi.fn()} />
+      </>
+    )
+
+    expect(html).not.toContain(removedLabel)
+    expect(html).not.toContain('comparison-buff--added')
+    expect(buildTargetSummary(legacyTarget, { rerollSaveOnes: true }, (key) => key)).toEqual([])
+    expect(buildDefenderUnitBuffSummary(legacyBuffs, (key) => key)).toEqual([])
   })
 
   it.each([

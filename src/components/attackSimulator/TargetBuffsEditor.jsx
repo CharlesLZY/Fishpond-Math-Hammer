@@ -38,12 +38,6 @@ function TargetBuffsEditor({ profile, onChange }) {
       onValueChange: (v) => update({ fnpMortal: parseInt(v, 10) }),
     },
     {
-      key: 'rerollSaveOnes',
-      label: t('rerollSaveOnes'),
-      active: !!profile.rerollSaveOnes,
-      onToggle: () => update({ rerollSaveOnes: !profile.rerollSaveOnes }),
-    },
-    {
       key: 'minusOneToHit',
       label: t('minusOneHit'),
       active: profile.minusOneToHit,

@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { simulateAttack } from '../attackSimulation'
+import { makeUnitBuffs, mergeUnitBuffs } from '../unitBuffMerge'
 
 // Tiny seeded PRNG (mulberry32) — gives deterministic Monte Carlo runs so
 // statistical assertions are exact across machines and CI.
@@ -31,8 +32,8 @@ const baseWeapon = (overrides = {}) => ({
   ap: 0,
   damage: '1',
   modelsFiring: 1,
-  hitReroll: 'none',
-  woundReroll: 'none',
+  hitReroll: 'no-reroll',
+  woundReroll: 'no-reroll',
   sustainedHits: 'off',
   lethalHits: false,
   devastatingWounds: false,
@@ -59,7 +60,6 @@ const baseTarget = (overrides = {}) => ({
   invulnSave: 0,
   fnp: 0,
   fnpMortal: 0,
-  saveReroll: 'none',
   minusOneToHit: false,
   minusOneToWound: false,
   minusOneToWoundIfStronger: false,
@@ -72,6 +72,15 @@ const baseTarget = (overrides = {}) => ({
 })
 
 const N = 5000
+
+const mockD6Faces = (...faces) => {
+  const random = vi.fn(() => {
+    throw new Error('Unexpected extra dice roll')
+  })
+  for (const face of faces) random.mockReturnValueOnce((face - 0.5) / 6)
+  Math.random = random
+  return random
+}
 
 describe('simulateAttack — basic correctness', () => {
   it('returns 0 expected kills/damage when no attacks land', () => {
@@ -96,6 +105,294 @@ describe('simulateAttack — basic correctness', () => {
     )
     expect(r.expectedDamage).toBeGreaterThan(0.55)
     expect(r.expectedDamage).toBeLessThan(0.78)
+  })
+})
+
+describe('simulateAttack — saving throws', () => {
+  it.each([
+    { label: 'armor', save: 2, invulnSave: 0, ap: 0 },
+    { label: 'invulnerable', save: 6, invulnSave: 2, ap: 4 },
+  ])('does not reroll a failed $label save from an obsolete buff', ({ save, invulnSave, ap }) => {
+    const random = vi.fn()
+      .mockReturnValueOnce(0.99)
+      .mockReturnValueOnce(0)
+      .mockReturnValue(0.99)
+    Math.random = random
+
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '1', torrent: true, ap })],
+      [baseTarget({ models: 1, save, invulnSave, rerollSaveOnes: true })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(result.expectedKills).toBe(1)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe.each([
+  {
+    stage: 'hit',
+    flag: 'rerollOneFailedHit',
+    policy: 'hitReroll',
+    scope: 'hitRerollScope',
+    weaponOverrides: { toHit: 4, critHitEnabled: true, critHit: 4, lethalHits: true },
+  },
+  {
+    stage: 'wound',
+    flag: 'rerollOneFailedWound',
+    policy: 'woundReroll',
+    scope: 'woundRerollScope',
+    weaponOverrides: { torrent: true },
+  },
+])('simulateAttack — unit-wide single failed $stage rerolls', ({
+  flag, policy, scope, weaponOverrides,
+}) => {
+  const weapon = (overrides = {}) =>
+    baseWeapon({ attacks: '1', ...weaponOverrides, ...overrides })
+  const run = (
+    weapons,
+    buffs,
+    iterations = 1,
+    targets = [baseTarget({ models: 100, save: 7 })]
+  ) => simulateAttack(weapons, targets, iterations, buffs)
+
+  it('shares one opportunity across all weapon profiles', () => {
+    const random = mockD6Faces(2, 6, 2)
+    const result = run([weapon(), weapon()], { [flag]: true })
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not grant another opportunity to each firing model', () => {
+    const random = mockD6Faces(2, 6, 2, 2)
+    const result = run([weapon({ modelsFiring: 3 })], { [flag]: true })
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not reset the budget when the active target profile changes', () => {
+    const random = mockD6Faces(2, 6, 2)
+    const result = run(
+      [weapon({ attacks: '2' })],
+      { [flag]: true },
+      1,
+      [baseTarget({ models: 1, save: 7 }), baseTarget({ models: 1, save: 7 })]
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('resets the shared budget for each simulation trial', () => {
+    const random = mockD6Faces(2, 6, 2, 2, 6, 2)
+    const result = run([weapon(), weapon()], { [flag]: true }, 2)
+
+    expect(result.expectedDamage).toBe(1)
+    expect(result.numSimulations).toBe(2)
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it.each([1, 2])('keeps the unit opportunity after reroll-ones produces a failed %s', (replacement) => {
+    const random = mockD6Faces(1, replacement, 2, 6)
+    const result = run(
+      [weapon({ attacks: '2' })],
+      { [flag]: true, [policy]: 'reroll-one' }
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(4)
+  })
+
+  it('never rerolls a failed 2 into a 1 and then rerolls that 1 again', () => {
+    const random = mockD6Faces(2, 1)
+    const result = run([weapon()], { [flag]: true, [policy]: 'reroll-one' })
+
+    expect(result.expectedDamage).toBe(0)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it('stacks with reroll-ones-and-twos without rerolling any die twice', () => {
+    const random = mockD6Faces(2, 1, 3, 6)
+    const result = run(
+      [weapon({ attacks: '2' })],
+      { [flag]: true, [policy]: 'reroll-one-two' }
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(4)
+  })
+
+  it.each(['reroll-fail', 'reroll-non-critical'])(
+    'adds no second reroll to a die already covered by %s',
+    (mode) => {
+      const random = mockD6Faces(2, 1, 3, 6)
+      const result = run([weapon({ attacks: '2' })], { [flag]: true, [policy]: mode })
+
+      expect(result.expectedDamage).toBe(1)
+      expect(random).toHaveBeenCalledTimes(4)
+    }
+  )
+
+  it('preserves existing profile-scoped reroll budgets independently', () => {
+    const random = mockD6Faces(2, 1, 2, 6, 2)
+    const result = run(
+      [weapon({ attacks: '3', [policy]: 'reroll-fail', [scope]: 'single' })],
+      { [flag]: true }
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(5)
+  })
+
+  it('does not spend the unit opportunity on an original success', () => {
+    const random = mockD6Faces(6, 2, 6)
+    const result = run([weapon({ attacks: '2' })], { [flag]: true })
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not treat the same flag on a weapon profile as a unit buff', () => {
+    const random = mockD6Faces(2)
+    const result = run([weapon({ [flag]: true })], {})
+
+    expect(result.expectedDamage).toBe(0)
+    expect(random).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not stack duplicate saved and additional unit-buff copies', () => {
+    const random = mockD6Faces(2, 6, 2)
+    const saved = Object.freeze(makeUnitBuffs({ [flag]: true }))
+    const extra = Object.freeze(makeUnitBuffs({ [flag]: true }))
+    const result = run([weapon(), weapon()], mergeUnitBuffs(saved, extra))
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(3)
+    expect(saved).toEqual(extra)
+  })
+
+  it('matches the closed-form expectation for reroll-ones plus one shared failed reroll', () => {
+    const result = run(
+      [weapon({ attacks: '2' }), weapon({ attacks: '2' })],
+      Object.freeze(makeUnitBuffs({ [flag]: true, [policy]: 'reroll-one' })),
+      N
+    )
+    const expected = 4 * (7 / 12) + 0.5 * (1 - (2 / 3) ** 4)
+
+    expect(Math.abs(result.expectedDamage - expected)).toBeLessThan(0.05)
+  })
+})
+
+describe('simulateAttack — shared unit reroll interactions', () => {
+  const targets = [baseTarget({ models: 100, save: 7 })]
+
+  it('keeps the hit and wound opportunities independent', () => {
+    const random = mockD6Faces(2, 4, 2, 4, 2, 4, 2)
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '3', toHit: 4 })],
+      targets,
+      1,
+      { rerollOneFailedHit: true, rerollOneFailedWound: true }
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(7)
+  })
+
+  it('stacks both unit opportunities with hit and wound reroll-ones', () => {
+    const random = mockD6Faces(1, 2, 2, 4, 1, 2, 4, 2, 4)
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '3', toHit: 4 })],
+      targets,
+      1,
+      {
+        hitReroll: 'reroll-one',
+        woundReroll: 'reroll-one',
+        rerollOneFailedHit: true,
+        rerollOneFailedWound: true,
+      }
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(9)
+  })
+
+  it('preserves the hit opportunity through a Torrent weapon', () => {
+    const random = mockD6Faces(6, 2, 6)
+    const result = simulateAttack(
+      [
+        baseWeapon({ attacks: '1', torrent: true }),
+        baseWeapon({ attacks: '1', lethalHits: true }),
+      ],
+      targets,
+      1,
+      { rerollOneFailedHit: true }
+    )
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('preserves the wound opportunity through Lethal Hits', () => {
+    const random = mockD6Faces(6, 2, 6)
+    const result = simulateAttack(
+      [
+        baseWeapon({ attacks: '1', lethalHits: true }),
+        baseWeapon({ attacks: '1', torrent: true }),
+      ],
+      targets,
+      1,
+      { rerollOneFailedWound: true }
+    )
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('shares the wound opportunity with Sustained Hits extras', () => {
+    const random = mockD6Faces(6, 2, 6, 2)
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '1', lethalHits: true, sustainedHits: '2' })],
+      targets,
+      1,
+      { rerollOneFailedWound: true }
+    )
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not spend the wound opportunity on a successful ANTI critical', () => {
+    const random = mockD6Faces(2, 2, 6)
+    const result = simulateAttack(
+      [
+        baseWeapon({ attacks: '1', torrent: true, antiEnabled: true, antiValue: 2 }),
+        baseWeapon({ attacks: '1', torrent: true }),
+      ],
+      targets,
+      1,
+      { rerollOneFailedWound: true }
+    )
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('evaluates failures using the modified wound threshold', () => {
+    const random = mockD6Faces(3, 2, 6)
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '2', torrent: true, plusOneWound: true })],
+      targets,
+      1,
+      { rerollOneFailedWound: true }
+    )
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(3)
   })
 })
 
@@ -807,5 +1104,3 @@ describe('simulateAttack — reroll never fires when not needed', () => {
     expect(all.expectedDamage).toBeGreaterThan(single.expectedDamage + 1)
   })
 })
-
-

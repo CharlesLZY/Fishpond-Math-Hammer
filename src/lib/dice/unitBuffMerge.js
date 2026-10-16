@@ -17,6 +17,8 @@
 // the rest of the kit. So the merge does NOT promote rerolls automatically:
 // a weapon's intrinsic reroll always wins over a unit-wide reroll. The
 // unit reroll is adopted only when the weapon has none.
+// Single failed-hit/wound rerolls stay on the unit; their budgets are
+// shared across all weapons by the simulator, not copied into each profile.
 
 import { parseDiceExpression } from './diceExpression'
 
@@ -54,6 +56,8 @@ const addOneToDiceExpression = (expression) => {
 export const makeUnitBuffs = (overrides = {}) => ({
   hitReroll: 'no-reroll',
   woundReroll: 'no-reroll',
+  rerollOneFailedHit: false,
+  rerollOneFailedWound: false,
   plusOneAttack: false,
   plusOneDamage: false,
   plusOneAp: false,
@@ -73,6 +77,8 @@ export const isUnitBuffsEmpty = (u) => {
   return (
     (u.hitReroll || 'no-reroll') === 'no-reroll' &&
     (u.woundReroll || 'no-reroll') === 'no-reroll' &&
+    !u.rerollOneFailedHit &&
+    !u.rerollOneFailedWound &&
     !u.plusOneAttack &&
     !u.plusOneDamage &&
     !u.plusOneAp &&
@@ -241,7 +247,6 @@ export const describeUpgrades = (weapon, unit) => {
 // ---------------------------------------------------------------------------
 
 export const makeTargetUnitBuffs = (overrides = {}) => ({
-  rerollSaveOnes: false,
   minusOneToHit: false,
   minusOneToWound: false,
   minusOneToWoundIfStronger: false,
@@ -256,7 +261,6 @@ export const makeTargetUnitBuffs = (overrides = {}) => ({
 export const isTargetUnitBuffsEmpty = (u) => {
   if (!u || typeof u !== 'object') return true
   return !(
-    u.rerollSaveOnes ||
     u.minusOneToHit ||
     u.minusOneToWound ||
     u.minusOneToWoundIfStronger ||
@@ -298,7 +302,6 @@ export const mergeTargetWithUnit = (target, unit) => {
   if (isTargetUnitBuffsEmpty(unit)) return target
   const merged = { ...target }
 
-  if (unit.rerollSaveOnes) merged.rerollSaveOnes = true
   if (unit.minusOneToHit) merged.minusOneToHit = true
   if (unit.benefitOfCover) merged.benefitOfCover = true
   if (unit.minusOneAp) merged.minusOneAp = true
@@ -337,7 +340,6 @@ export const describeTargetUpgrades = (target, unit) => {
   if (!target || isTargetUnitBuffsEmpty(unit)) return out
   const merged = mergeTargetWithUnit(target, unit)
 
-  if (merged.rerollSaveOnes && !target.rerollSaveOnes) out.rerollSaveOnes = true
   if (merged.minusOneToHit && !target.minusOneToHit) out.minusOneToHit = true
   if (merged.benefitOfCover && !target.benefitOfCover) out.benefitOfCover = true
   if (merged.minusOneAp && !target.minusOneAp) out.minusOneAp = true

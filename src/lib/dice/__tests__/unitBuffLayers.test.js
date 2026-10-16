@@ -8,6 +8,28 @@ import {
 } from '../unitBuffMerge'
 
 describe('saved and additional unit buff layers', () => {
+  it.each(['rerollOneFailedHit', 'rerollOneFailedWound'])(
+    'keeps %s alongside general rerolls without stacking duplicate copies',
+    (flag) => {
+      const saved = Object.freeze(makeUnitBuffs({ [flag]: true }))
+      const extra = Object.freeze(makeUnitBuffs({
+        [flag]: true,
+        hitReroll: 'reroll-one',
+        woundReroll: 'reroll-one',
+      }))
+      const merged = mergeUnitBuffs(saved, extra)
+
+      expect(merged).toEqual(extra)
+      expect(mergeUnitBuffs(extra, saved)).toEqual(extra)
+      expect(mergeUnitBuffs(saved, makeUnitBuffs())).toEqual(saved)
+      expect(saved.hitReroll).toBe('no-reroll')
+      expect(mergeWeaponWithUnit({
+        hitReroll: 'no-reroll',
+        woundReroll: 'no-reroll',
+      }, merged)).not.toHaveProperty(flag)
+    }
+  )
+
   it.each([
     ['reroll-one', 'reroll-fail'],
     ['reroll-one', 'reroll-one-two'],

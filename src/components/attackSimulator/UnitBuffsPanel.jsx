@@ -1,8 +1,7 @@
 // Unit-wide buff panel for the attacking unit.
 //
-// Holds buffs that the firing unit grants to every weapon (stratagems,
-// detachment rules, auras). At simulation time these get merged into each
-// weapon profile via `mergeWeaponWithUnit` (best-wins, no stacking).
+// Most grants merge into each weapon profile. Single failed-roll rerolls
+// stay at unit scope and share their budgets across every weapon.
 
 import { FormSelect, BuffChipGroup } from '../ui'
 import {
@@ -40,6 +39,18 @@ function UnitBuffsPanel({ value, onChange, disabled = false, additional = false 
   const localizedWoundRerollOptions = localizeRerollOptions(woundRerollOptions)
 
   const buffs = [
+    {
+      key: 'rerollOneFailedHit',
+      label: t('rerollOneFailedHit'),
+      active: value.rerollOneFailedHit,
+      onToggle: () => update({ rerollOneFailedHit: !value.rerollOneFailedHit }),
+    },
+    {
+      key: 'rerollOneFailedWound',
+      label: t('rerollOneFailedWound'),
+      active: value.rerollOneFailedWound,
+      onToggle: () => update({ rerollOneFailedWound: !value.rerollOneFailedWound }),
+    },
     {
       key: 'plusOneAttack',
       label: t('plusOneAttack'),
