@@ -59,7 +59,9 @@ belongs in that page's stylesheet.
   Menus are capped at 8 rows (based on current typography, padding, and
   touch-target height), automatically open above/below as space allows,
   and scroll vertically with contained wheel/touch scrolling. Long option
-  labels wrap instead of widening the page; selected labels remain compact.
+  labels wrap instead of widening the page. Selected labels and placeholders
+  stay on one line with ellipsis inside the fixed-height control, so long
+  placeholder text cannot push the dropdown indicator below its border.
 - At 768px and below, the comparison table becomes labeled, stacked result
   cards using the same markup. Long names wrap and no horizontal table
   scrolling is needed. The run controls remain reachable at the bottom and

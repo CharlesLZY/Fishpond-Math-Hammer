@@ -40,6 +40,15 @@ export const selectStyles = {
     ...baseStyles,
     padding: '0 6px'
   }),
+  placeholder: (baseStyles) => ({
+    ...baseStyles,
+    minWidth: 0,
+    maxWidth: '100%',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontSize: 'var(--select-font-size, inherit)'
+  }),
   singleValue: (baseStyles) => ({
     ...baseStyles,
     color: '#d0d0d0',

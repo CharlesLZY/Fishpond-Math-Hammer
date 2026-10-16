@@ -10,6 +10,25 @@ const options = Array.from({ length: 80 }, (_, index) => ({
 }))
 
 describe('shared dropdown menus', () => {
+  it('keeps long placeholders inside the control without clipping or truncating menu options', () => {
+    const base = { color: '#808080', gridArea: '1/1/2/3', marginLeft: 2, marginRight: 2 }
+    const expected = {
+      ...base,
+      minWidth: 0,
+      maxWidth: '100%',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      fontSize: 'var(--select-font-size, inherit)',
+    }
+
+    expect(selectStyles.placeholder(base)).toEqual(expected)
+    expect(buffSelectStyles.placeholder(base)).toEqual(expected)
+    expect(selectStyles.control({}, { isFocused: false })).not.toHaveProperty('overflow')
+    expect(selectStyles.option({}, {})).toMatchObject({ overflowWrap: 'anywhere' })
+    expect(selectStyles.option({}, {})).not.toHaveProperty('whiteSpace', 'nowrap')
+  })
+
   it('bounds a long menu by eight rows without dropping any selectable entries', () => {
     const html = renderToStaticMarkup(
       <FormSelect options={options} menuIsOpen instanceId="bounded-menu" />
@@ -109,5 +128,22 @@ describe('saved Profile selectors', () => {
     expect(select.props.value).toBeNull()
     expect(html).toContain(props.emptyLabel)
     expect(html).toContain(props.placeholder)
+  })
+
+  it.each([
+    '— Saved attacker profiles —',
+    '— Saved defender profiles —',
+    '— 已保存的攻击方面板 —',
+    '— 已保存的防御方面板 —',
+  ])('renders an unselected %s as a single-line placeholder', (placeholder) => {
+    const html = renderToStaticMarkup(
+      <SavedSetControls {...props} value="" placeholder={placeholder} />
+    )
+
+    expect(html).toContain('profile-select__placeholder')
+    expect(html).toContain(`>${placeholder}</div>`)
+    expect(html).toContain('white-space:nowrap')
+    expect(html).toContain('text-overflow:ellipsis')
+    expect(html).toContain('aria-label="Load saved attacker profile"')
   })
 })
