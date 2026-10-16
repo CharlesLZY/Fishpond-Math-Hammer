@@ -173,7 +173,6 @@ export default function ProfileLibrary() {
     setSelectedName(name)
     setDraft(nextDraft)
     setDirty(false)
-    setToast({ kind: 'success', message: t('profileCreated', name) })
   }
 
   const handleSave = () => {
@@ -218,7 +217,6 @@ export default function ProfileLibrary() {
     setSelectedName(name)
     setDraft(api.hydrate(api.load(name)))
     setDirty(false)
-    setToast({ kind: 'success', message: t('profileCreated', name) })
   }
 
   const handleDelete = () => {
@@ -297,27 +295,46 @@ export default function ProfileLibrary() {
     <section className="profile-library-page">
       <header className="attack-sim-section-header profile-page-heading">
         <h2>{t('profileLibrary')}</h2>
+      </header>
+
+      <div className="profile-library-tabs-row">
+        <Tabs
+          value={side}
+          onChange={handleSideChange}
+          ariaLabel={t('profileLibrary')}
+          tabs={[
+            { value: 'attacker', label: `${t('attackerLibrary')} (${side === 'attacker' ? names.length : listSavedWeaponSets().length})` },
+            { value: 'defender', label: `${t('defenderLibrary')} (${side === 'defender' ? names.length : listSavedTargetSets().length})` },
+          ]}
+        />
         <div className="profile-library-toolbar">
-          <button type="button" className="toolbar-button" onClick={() => openNameDialog('new')}>
-            <Plus size={14} />
-            <span>{t('newProfile')}</span>
-          </button>
           <button
             type="button"
-            className="toolbar-button"
-            onClick={() => fileInputRef.current?.click()}
+            className="toolbar-button toolbar-button--icon"
+            onClick={() => openNameDialog('new')}
+            aria-label={t('newProfile')}
+            title={t('newProfile')}
           >
-            <Upload size={14} />
-            <span>{t('import')}</span>
+            <Plus size={14} aria-hidden="true" />
           </button>
           <button
             type="button"
-            className="toolbar-button"
+            className="toolbar-button toolbar-button--icon"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label={t('import')}
+            title={t('import')}
+          >
+            <Upload size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="toolbar-button toolbar-button--icon"
             onClick={handleExport}
             disabled={names.length === 0}
+            aria-label={t('export')}
+            title={t('export')}
           >
-            <Download size={14} />
-            <span>{t('export')}</span>
+            <Download size={14} aria-hidden="true" />
           </button>
           <input
             ref={fileInputRef}
@@ -327,17 +344,7 @@ export default function ProfileLibrary() {
             hidden
           />
         </div>
-      </header>
-
-      <Tabs
-        value={side}
-        onChange={handleSideChange}
-        ariaLabel={t('profileLibrary')}
-        tabs={[
-          { value: 'attacker', label: `${t('attackerLibrary')} (${side === 'attacker' ? names.length : listSavedWeaponSets().length})` },
-          { value: 'defender', label: `${t('defenderLibrary')} (${side === 'defender' ? names.length : listSavedTargetSets().length})` },
-        ]}
-      />
+      </div>
 
       {toast && (
         <div className="attack-sim-toast-row">

@@ -34,6 +34,14 @@ No CSS framework and no backend.
 Routing entry point: [App.jsx](../src/App.jsx).
 
 The 40K secondary navigation is **Simulator / Library / Comparison**.
+The Simulator has one Save Profile action per side. Its name dialog defaults
+to the selected Profile name; saving that name replaces the existing entry.
+Changing the name creates a new entry, with overwrite confirmation if it
+belongs to a different saved Profile. The Library's New/Import/Export actions
+are icon-only and share the Attacker/Defender tab row. Successful creation
+or duplication selects the new Profile without a transient success toast.
+Comparison links to profile management only through its empty-state button.
+
 Comparison may select the same saved attacker in multiple slots. Each slot
 shows the saved buffs as a gray, read-only baseline. A separate Additional
 Unit Buffs editor starts empty and edits only that slot's yellow additions;

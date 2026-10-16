@@ -47,6 +47,12 @@ in `uiShared.css` or `formCard.css`. If it is tied to one page's structure, it
 belongs in that page's stylesheet.
 
 ### 40K Profile pages
+- Library keeps New Profile, Import, and Export beside the Attacker/Defender
+  tabs on desktop and mobile. These actions are icon-only, with localized
+  accessible names and hover titles. Creating or duplicating a Profile does
+  not insert a success-toast row that temporarily shifts the layout.
+- Comparison offers a button-styled Manage Profiles link only in its empty
+  state, not in the page heading.
 - Comparison and the Tactical Board line tool share `TACTICAL_LINE_COLORS`
   in `src/lib/colors.js`. The four attacker slots use Steel Blue, Diff Red,
   Diff Green, and Gold; Pearl remains available only on the board.

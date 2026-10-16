@@ -1,4 +1,4 @@
-import { RefreshCw, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import FormSelect from './FormSelect'
 
 function SavedSetControls({
@@ -8,10 +8,7 @@ function SavedSetControls({
   emptyLabel,
   onChange,
   onSave,
-  saveLabel = 'Save Set…',
-  onUpdate,
-  updateLabel = 'Update',
-  updateDisabled,
+  saveLabel = 'Save Profile',
   groupAriaLabel,
   selectAriaLabel,
 }) {
@@ -33,15 +30,6 @@ function SavedSetControls({
       <button type="button" className="toolbar-button" onClick={onSave}>
         <Save size={14} />
         <span>{saveLabel}</span>
-      </button>
-      <button
-        type="button"
-        className="toolbar-button"
-        onClick={onUpdate}
-        disabled={updateDisabled}
-      >
-        <RefreshCw size={14} />
-        <span>{updateLabel}</span>
       </button>
     </div>
   )

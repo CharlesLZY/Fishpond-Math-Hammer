@@ -50,6 +50,33 @@ describe('Profile comparison presentation', () => {
     vi.unstubAllGlobals()
   })
 
+  it.each([
+    ['en', 'New Profile', 'Attacker Profiles', 'Defender Profiles', 'Import', 'Export'],
+    ['zh', '新建面板', '攻击方面板', '防御方面板', '导入', '导出'],
+  ])('places accessible icon-only %s library actions beside the side tabs', (
+    lang, newProfile, attacker, defender, importLabel, exportLabel
+  ) => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => key === 'attackSim_lang' ? lang : null,
+    })
+    const html = render(<ProfileLibrary />)
+    const heading = html.match(/<header class="attack-sim-section-header profile-page-heading">(.+?)<\/header>/)?.[1]
+    const tabRow = html.match(/<div class="profile-library-tabs-row">(.+?)<\/div>/)?.[1]
+
+    expect(heading).not.toContain('<button')
+    expect(tabRow).toContain(`${attacker} (0)</button>`)
+    expect(tabRow).toContain(`${defender} (0)</button>`)
+    expect(tabRow).toContain('</nav><div class="profile-library-toolbar">')
+    const toolbar = html.match(/<div class="profile-library-toolbar">(.+?)<\/div>/)?.[1]
+    expect(toolbar.match(/<button\b/g)).toHaveLength(3)
+    expect(toolbar).not.toContain('<span')
+    for (const label of [newProfile, importLabel, exportLabel]) {
+      expect(toolbar).toContain(`aria-label="${label}"`)
+      expect(toolbar).toContain(`title="${label}"`)
+      expect(toolbar).not.toContain(`>${label}<`)
+    }
+  })
+
   it('shares the unchanged Tactical Board line palette', () => {
     expect(TACTICAL_LINE_COLORS.map(({ value }) => value)).toEqual([
       '#6b8caf', '#f85149', '#3fb950', '#e3b341', '#e6e1d3',
@@ -69,7 +96,7 @@ describe('Profile comparison presentation', () => {
   it.each([
     ['en', 'Saved Profiles are required for comparison.', 'Manage Profiles'],
     ['zh', '请先保存用于对比的面板。', '管理面板'],
-  ])('keeps only the empty-state heading and library link in %s', (lang, heading, link) => {
+  ])('keeps a button-styled library link only in the %s empty state', (lang, heading, link) => {
     vi.stubGlobal('localStorage', {
       getItem: (key) => key === 'attackSim_lang' ? lang : null,
     })
@@ -81,8 +108,11 @@ describe('Profile comparison presentation', () => {
     const emptyState = html.match(/<div class="profile-comparison-empty">(.+?)<\/div>/)?.[1]
 
     expect(emptyState).toContain(`<strong>${heading}</strong>`)
+    expect(emptyState).toContain('class="toolbar-button profile-page-link"')
     expect(emptyState).toContain(`>${link}</a>`)
     expect(emptyState).not.toContain('<span>')
+    expect(html.split(`>${link}</a>`)).toHaveLength(2)
+    expect(html.match(/<header\b[^>]*>(.+?)<\/header>/)?.[1]).not.toContain(link)
   })
 
   it('uses 面板 in Chinese actions and messages without translating saved names', () => {
@@ -105,10 +135,46 @@ describe('Profile comparison presentation', () => {
       expect(messages).toContain(text)
     }
     const simulator = render(<AttackSimulator />)
-    expect(simulator).toContain('保存面板…')
-    expect(simulator).toContain('更新面板')
+    expect(simulator).toContain('保存面板')
+    expect(simulator).not.toContain('更新面板')
     expect(simulator).toContain('aria-label="加载已保存的攻击方面板"')
     expect(simulator).toContain('aria-label="加载已保存的防御方面板"')
+  })
+
+  it.each([
+    ['en', 'Save Profile', 'Update Profile', 'Saved attacker profiles', 'Saved defender profiles'],
+    ['zh', '保存面板', '更新面板', '已保存攻击方面板', '已保存防御方面板'],
+  ])('offers concise profile labels and only Save Profile for each side in %s', (
+    lang, save, update, attackerPlaceholder, defenderPlaceholder
+  ) => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => key === 'attackSim_lang' ? lang : null,
+    })
+    const html = render(<AttackSimulator />)
+
+    expect(html.split(`>${save}</span>`)).toHaveLength(3)
+    expect(html).toContain(`>${attackerPlaceholder}</div>`)
+    expect(html).toContain(`>${defenderPlaceholder}</div>`)
+    expect(html).not.toContain(`${save}…`)
+    expect(html).not.toContain(update)
+  })
+
+  it('omits Manage Profiles when the comparison libraries are populated', () => {
+    const saved = {
+      'attackSim:attackerProfiles': { Squad: { weapons: [makeWeapon()], unitBuffs: null } },
+      'attackSim:defenderProfiles': { Target: { targets: [makeTarget()], defenderUnitBuffs: null } },
+    }
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => saved[key] ? JSON.stringify(saved[key]) : null,
+    })
+    const html = render(
+      <MemoryRouter>
+        <ProfileComparison />
+      </MemoryRouter>
+    )
+
+    expect(html).not.toContain('Manage Profiles')
+    expect(html).not.toContain('profile-page-link')
   })
 
   it.each([

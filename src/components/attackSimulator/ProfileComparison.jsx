@@ -191,15 +191,14 @@ export default function ProfileComparison() {
     <section className="profile-comparison-page">
       <header className="attack-sim-section-header profile-page-heading">
         <h2>{t('comparison')}</h2>
-        <Link className="toolbar-button profile-page-link" to="/attack-simulator/profiles">
-          {t('manageProfiles')}
-        </Link>
       </header>
 
       {(attackerOptions.length === 0 || defenderOptions.length === 0) && (
         <div className="profile-comparison-empty">
           <strong>{t('comparisonNeedsProfiles')}</strong>
-          <Link to="/attack-simulator/profiles">{t('manageProfiles')}</Link>
+          <Link className="toolbar-button profile-page-link" to="/attack-simulator/profiles">
+            {t('manageProfiles')}
+          </Link>
         </div>
       )}
 

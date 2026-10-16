@@ -92,8 +92,6 @@ describe('saved Profile selectors', () => {
     emptyLabel: '还没有保存的面板。',
     onChange: vi.fn(),
     onSave: vi.fn(),
-    onUpdate: vi.fn(),
-    updateDisabled: false,
     selectAriaLabel: 'Load saved attacker profile',
     groupAriaLabel: 'Saved attacker profiles',
   }
@@ -107,6 +105,17 @@ describe('saved Profile selectors', () => {
     expect(html).toContain('aria-label="Load saved attacker profile"')
     expect(html).toContain('>Squad 80</div>')
     expect(html).toContain('profile-select__clear-indicator')
+  })
+
+  it('provides only one save action and preserves its callback', () => {
+    const onSave = vi.fn()
+    const controls = SavedSetControls({ ...props, onSave })
+    const html = renderToStaticMarkup(controls)
+
+    expect(html.match(/<button\b/g)).toHaveLength(1)
+    expect(html).not.toContain('Update')
+    controls.props.children[1].props.onClick()
+    expect(onSave).toHaveBeenCalledOnce()
   })
 
   it('preserves string-name selection and clearing callbacks', () => {
@@ -131,10 +140,10 @@ describe('saved Profile selectors', () => {
   })
 
   it.each([
-    '— Saved attacker profiles —',
-    '— Saved defender profiles —',
-    '— 已保存的攻击方面板 —',
-    '— 已保存的防御方面板 —',
+    'Saved attacker profiles',
+    'Saved defender profiles',
+    '已保存攻击方面板',
+    '已保存防御方面板',
   ])('renders an unselected %s as a single-line placeholder', (placeholder) => {
     const html = renderToStaticMarkup(
       <SavedSetControls {...props} value="" placeholder={placeholder} />

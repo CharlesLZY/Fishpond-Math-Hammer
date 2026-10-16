@@ -91,6 +91,16 @@ describe.each(sides)('$name Profile library imports', (side) => {
     expect(side.load('Profile 6')).toEqual(side.payload(6))
   })
 
+  it('updates an existing Profile by saving the same name without creating a duplicate', () => {
+    side.save('Current', side.payload(4))
+    side.save('Other', side.payload(5))
+
+    expect(side.save('Current', side.payload(8))).toBe(true)
+    expect(side.list()).toEqual(['Current', 'Other'])
+    expect(side.load('Current')).toEqual(side.payload(8))
+    expect(side.load('Other')).toEqual(side.payload(5))
+  })
+
   it('renames one Profile without changing the rest of the library', () => {
     side.save('Original', side.payload(4))
     side.save('Unchanged', side.payload(5))

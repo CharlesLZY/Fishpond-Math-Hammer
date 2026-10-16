@@ -14,7 +14,6 @@ import {
   listSavedTargetSets,
   saveNamedTargetSet,
   loadNamedTargetSet,
-  StorageQuotaError,
 } from '../lib/attackSimStorage'
 import {
   validateTargetShape,
@@ -82,30 +81,6 @@ function AttackSimulator() {
     setToast({ kind: 'success', message: t('profileSaved', t('attackerProfile'), name) })
   }
 
-  const handleUpdateWeaponSet = () => {
-    if (!selectedWeaponSet) return
-    try {
-      const ok = saveNamedWeaponSet(
-        selectedWeaponSet,
-        serializeAttackerProfile({ weapons, unitBuffs })
-      )
-      if (!ok) {
-        setToast({ kind: 'error', message: t('storageUnavailable') })
-        return
-      }
-      setToast({
-        kind: 'success',
-        message: t('profileUpdated', t('attackerProfile'), selectedWeaponSet),
-      })
-    } catch (err) {
-      if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: t('profileStorageFull') })
-        return
-      }
-      throw err
-    }
-  }
-
   const handleLoadWeaponSet = (name) => {
     setSelectedWeaponSet(name)
     if (!name) return
@@ -138,30 +113,6 @@ function AttackSimulator() {
     refreshTargetSets()
     setSelectedTargetSet(name)
     setToast({ kind: 'success', message: t('profileSaved', t('defenderProfile'), name) })
-  }
-
-  const handleUpdateTargetSet = () => {
-    if (!selectedTargetSet) return
-    try {
-      const ok = saveNamedTargetSet(
-        selectedTargetSet,
-        serializeDefenderProfile({ targets, defenderUnitBuffs })
-      )
-      if (!ok) {
-        setToast({ kind: 'error', message: t('storageUnavailable') })
-        return
-      }
-      setToast({
-        kind: 'success',
-        message: t('profileUpdated', t('defenderProfile'), selectedTargetSet),
-      })
-    } catch (err) {
-      if (err instanceof StorageQuotaError) {
-        setToast({ kind: 'error', message: t('profileStorageFull') })
-        return
-      }
-      throw err
-    }
   }
 
   const handleLoadTargetSet = (name) => {
@@ -251,6 +202,7 @@ function AttackSimulator() {
       {namingSide && (
         <ProfileNameDialog
           title={t('saveProfileAs', t(namingSide === 'attacker' ? 'attackerProfile' : 'defenderProfile'))}
+          initialName={namingSide === 'attacker' ? selectedWeaponSet : selectedTargetSet}
           existingNames={namingSide === 'attacker' ? savedWeaponSets : savedTargetSets}
           replaceName={namingSide === 'attacker' ? selectedWeaponSet : selectedTargetSet}
           submitLabel={t('saveProfileAction')}
@@ -272,9 +224,6 @@ function AttackSimulator() {
             onChange={handleLoadWeaponSet}
             onSave={() => setNamingSide('attacker')}
             saveLabel={t('saveProfile')}
-            onUpdate={handleUpdateWeaponSet}
-            updateLabel={t('updateProfile')}
-            updateDisabled={!selectedWeaponSet}
             groupAriaLabel={t('savedAttackerGroup')}
             selectAriaLabel={t('loadAttackerProfile')}
           />
@@ -300,9 +249,6 @@ function AttackSimulator() {
             onChange={handleLoadTargetSet}
             onSave={() => setNamingSide('defender')}
             saveLabel={t('saveProfile')}
-            onUpdate={handleUpdateTargetSet}
-            updateLabel={t('updateProfile')}
-            updateDisabled={!selectedTargetSet}
             groupAriaLabel={t('savedDefenderGroup')}
             selectAriaLabel={t('loadDefenderProfile')}
           />
