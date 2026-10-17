@@ -182,7 +182,6 @@ export default function ProfileLibrary() {
         throw new Error(t('storageUnavailable'))
       }
       setDirty(false)
-      setToast({ kind: 'success', message: t('profileSaved', t('thProfile'), selectedName) })
     } catch (error) {
       showStorageError(error)
     }
@@ -230,7 +229,6 @@ export default function ProfileLibrary() {
       setSelectedName('')
       setDraft(null)
       setDirty(false)
-      setToast({ kind: 'success', message: t('profileDeleted', selectedName) })
     } catch (error) {
       showStorageError(error)
     }

@@ -49,8 +49,9 @@ belongs in that page's stylesheet.
 ### 40K Profile pages
 - Library keeps New Profile, Import, and Export beside the Attacker/Defender
   tabs on desktop and mobile. These actions are icon-only, with localized
-  accessible names and hover titles. Creating or duplicating a Profile does
-  not insert a success-toast row that temporarily shifts the layout.
+  accessible names and hover titles. Creating, duplicating, saving, or deleting
+  a Profile does not insert a success-toast row that temporarily shifts the
+  layout. Delete confirmation and failure messages remain visible.
 - Comparison offers a button-styled Manage Profiles link only in its empty
   state, not in the page heading.
 - Comparison and the Tactical Board line tool share `TACTICAL_LINE_COLORS`
