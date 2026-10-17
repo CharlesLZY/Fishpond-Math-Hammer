@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeWeaponProfileRerolls } from '../weaponProfile'
+import { normalizeAttackBonusValue, normalizeWeaponProfileRerolls } from '../weaponProfile'
 
 const weapon = (overrides = {}) => ({
   attacks: 'D6+2',
@@ -12,6 +12,23 @@ const weapon = (overrides = {}) => ({
   hitReroll: 'reroll-fail',
   hitRerollScope: 'single',
   ...overrides,
+})
+
+describe('normalizeAttackBonusValue', () => {
+  it.each([
+    [undefined, 1],
+    [null, 1],
+    [-1, 1],
+    [0, 1],
+    [1, 1],
+    [2, 2],
+    [2.9, 2],
+    [5, 5],
+    [6, 5],
+    [9, 5],
+  ])('normalizes %s to %s for Blast/Cleave X', (value, expected) => {
+    expect(normalizeAttackBonusValue(value)).toBe(expected)
+  })
 })
 
 describe('normalizeWeaponProfileRerolls', () => {

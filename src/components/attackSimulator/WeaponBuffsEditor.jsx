@@ -13,7 +13,7 @@ import {
   sustainedOptions,
   cleaveOptions,
 } from '../../lib/dice/options'
-import { isValidDiceExpression, parseDiceExpression } from '../../lib/dice'
+import { isValidDiceExpression, normalizeAttackBonusValue, parseDiceExpression } from '../../lib/dice'
 import { useT } from '../attackSim/lang'
 
 const rerollLangKeys = {
@@ -44,6 +44,7 @@ const HIT_ONLY_BUFF_KEYS = new Set([
 function WeaponBuffsEditor({ profile, onChange }) {
   const { t } = useT()
   const update = (patch) => onChange({ ...profile, ...patch })
+  const cleaveActive = !!profile.cleaveEnabled && !profile.blast
 
   const attacksValid = isValidDiceExpression(profile.attacks)
   const damageValid = isValidDiceExpression(profile.damage)
@@ -103,14 +104,29 @@ function WeaponBuffsEditor({ profile, onChange }) {
       key: 'blast',
       label: t('blast'),
       active: profile.blast,
-      onToggle: () => update({ blast: !profile.blast }),
+      onToggle: () =>
+        update({
+          blast: !profile.blast,
+          blastValue: 1,
+          cleaveEnabled: false,
+          cleaveValue: 1,
+        }),
+      value: normalizeAttackBonusValue(profile.blastValue).toString(),
+      valueOptions: cleaveOptions,
+      onValueChange: (v) => update({ blastValue: parseInt(v, 10) }),
     },
     {
       key: 'cleave',
       label: t('cleave'),
-      active: profile.cleaveEnabled,
-      onToggle: () => update({ cleaveEnabled: !profile.cleaveEnabled }),
-      value: profile.cleaveValue?.toString() || '1',
+      active: cleaveActive,
+      onToggle: () =>
+        update({
+          cleaveEnabled: !cleaveActive,
+          cleaveValue: 1,
+          blast: false,
+          blastValue: 1,
+        }),
+      value: normalizeAttackBonusValue(profile.cleaveValue).toString(),
       valueOptions: cleaveOptions,
       onValueChange: (v) => update({ cleaveValue: parseInt(v, 10) }),
     },

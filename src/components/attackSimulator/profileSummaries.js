@@ -1,3 +1,5 @@
+import { normalizeAttackBonusValue } from '../../lib/dice'
+
 const rerollShort = {
   'reroll-one': '1s',
   'reroll-one-two': 'Ones and Twos',
@@ -53,9 +55,10 @@ export function buildWeaponSummary(profile, upgrades, t) {
   if (profile.ignoresCover) push('ignoresCover', t('ignoresCover'))
   if (profile.devastatingWounds)
     push('devastating', t('devastatingWounds'))
-  if (profile.blast) push('blast', t('blast'))
-  if (profile.cleaveEnabled)
-    push('cleave', `${t('cleave')} ${profile.cleaveValue}`)
+  if (profile.blast)
+    push('blast', `${t('blast')} ${normalizeAttackBonusValue(profile.blastValue)}`)
+  if (!profile.blast && profile.cleaveEnabled)
+    push('cleave', `${t('cleave')} ${normalizeAttackBonusValue(profile.cleaveValue)}`)
   if (profile.plusOneWound) push('plusOneWound', t('plusOneWound'))
   if (profile.antiEnabled)
     push('anti', `${t('anti')} ${profile.antiValue}+`)

@@ -52,8 +52,8 @@ For each attack:
 | **Devastating Wounds** | `devastatingWounds` | Each crit wound becomes mortal wounds (bypasses saves). |
 | **Anti-X N+** | `antiBuff`, `antiEnabled` + `antiValue` | Wound roll uses N+ (or better) against the keyword (e.g. Anti-Vehicle 4+). |
 | **Lance** | `lance` | +1 to the wound roll (treated as the bearer charging). Floored at 2+ by `clampThreshold`. |
-| **Blast** | `blast` | +`floor(target_models / 5)` to every attack roll. Snapshotted at trial start, not live. |
-| **Cleave X** | `cleaveEnabled` + `cleaveValue` | +`X × floor(target_models / 5)` attack dice (single target only — always true in this sim). Snapshotted at trial start, like Blast. |
+| **Blast X** | `blast` + `blastValue` | +`X × floor(target_models / 5)` attacks per weapon instance. X is an integer from 1 to 5, default 1. Mutually exclusive with Cleave; takes precedence in conflicting legacy profiles. Snapshotted at trial start, not live. |
+| **Cleave X** | `cleaveEnabled` + `cleaveValue` | +`X × floor(target_models / 5)` attacks per weapon instance (single target only — always true in this sim). X is an integer from 1 to 5, default 1. Mutually exclusive with Blast. Snapshotted at trial start, like Blast. |
 | **Ignores Cover** | `ignoresCover` | Cancels the target's Benefit of Cover. |
 | **Benefit of Cover** | `benefitOfCover` (target) | 11e: worsens the attacker's BS by 1 (−1 to hit), not the save. A characteristic modifier, so it **stacks** on top of −1 to Hit and is not subject to the ±1 roll cap. Negated by Ignores Cover; no effect under Torrent. |
 | **−1 AP** | `minusOneAp` (target) | Reduces the attacker's AP by 1 (e.g. Armour of Contempt), improving the armour save. Floored at 0 — **no effect on AP 0 attacks**. Available per-target and as a Beta defender unit buff. |

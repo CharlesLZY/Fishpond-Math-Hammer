@@ -443,6 +443,108 @@ describe('simulateAttack — Cleave X', () => {
   })
 })
 
+describe.each([
+  { name: 'Blast X', enabledKey: 'blast', valueKey: 'blastValue' },
+  { name: 'Cleave X', enabledKey: 'cleaveEnabled', valueKey: 'cleaveValue' },
+])('simulateAttack — $name scaling and limits', ({ enabledKey, valueKey }) => {
+  it.each([
+    [4, 1],
+    [5, 3],
+    [9, 3],
+    [10, 5],
+    [14, 5],
+    [15, 7],
+  ])('makes exactly %i target models produce %i attacks with X = 2', (models, attacks) => {
+    const random = vi.fn(() => 0.99)
+    Math.random = random
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '1', torrent: true, [enabledKey]: true, [valueKey]: 2 })],
+      [baseTarget({ models, wounds: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(attacks)
+    expect(random).toHaveBeenCalledTimes(attacks)
+  })
+
+  it.each([
+    [undefined, 3],
+    [0, 3],
+    [1, 3],
+    [2, 5],
+    [5, 11],
+    [6, 11],
+  ])('uses the default or bounded value for X = %s', (value, attacks) => {
+    Math.random = () => 0.99
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '1', torrent: true, [enabledKey]: true, [valueKey]: value })],
+      [baseTarget({ models: 10, wounds: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(attacks)
+  })
+
+  it.each([
+    ['1', 10],
+    ['D3', 14],
+  ])('adds the bonus to each weapon instance with attacks %s', (attacks, damage) => {
+    Math.random = () => 0.99
+    const result = simulateAttack(
+      [baseWeapon({ attacks, modelsFiring: 2, torrent: true, [enabledKey]: true, [valueKey]: 2 })],
+      [baseTarget({ models: 10, wounds: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(damage)
+  })
+
+  it('uses the initial target count after earlier weapons kill models', () => {
+    Math.random = () => 0.99
+    const weapon = baseWeapon({
+      attacks: '1', torrent: true, [enabledKey]: true, [valueKey]: 2,
+    })
+    const result = simulateAttack(
+      [weapon, weapon],
+      [baseTarget({ models: 10, save: 7 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(10)
+  })
+
+  it('does not apply a stored value while the buff is disabled', () => {
+    Math.random = () => 0.99
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '1', torrent: true, [enabledKey]: false, [valueKey]: 5 })],
+      [baseTarget({ models: 10, wounds: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(1)
+  })
+})
+
+describe('simulateAttack — mutually exclusive Blast and Cleave', () => {
+  it('uses only Blast when a legacy profile has both buffs enabled', () => {
+    Math.random = () => 0.99
+    const result = simulateAttack(
+      [baseWeapon({
+        attacks: '1',
+        torrent: true,
+        blast: true,
+        blastValue: 2,
+        cleaveEnabled: true,
+        cleaveValue: 3,
+      })],
+      [baseTarget({ models: 10, wounds: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(5)
+  })
+})
+
 describe('simulateAttack — +1 Wound', () => {
   it('S=15 vs T=1 with +1 Wound still wounds on 2+ (clamp floor, never 1+)', () => {
     // BS auto-hit. Wound base for S>=2T is 2+; +1 wound gives -1 to threshold,

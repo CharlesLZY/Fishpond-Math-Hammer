@@ -1,6 +1,7 @@
 import {
   makeTargetUnitBuffs,
   makeUnitBuffs,
+  normalizeAttackBonusValue,
   normalizeWeaponProfileRerolls,
 } from './dice'
 
@@ -34,13 +35,16 @@ export const makeWeapon = (overrides = {}) => ({
   devastatingWounds: false,
   plusOneWound: false,
   blast: false,
-  cleaveEnabled: false,
-  cleaveValue: 1,
   plusOneHit: false,
   ignoresCover: false,
   antiEnabled: false,
   antiValue: 4,
   ...overrides,
+  cleaveEnabled: !!overrides.cleaveEnabled && !overrides.blast,
+  blastValue: overrides.blast ? normalizeAttackBonusValue(overrides.blastValue) : 1,
+  cleaveValue: overrides.cleaveEnabled && !overrides.blast
+    ? normalizeAttackBonusValue(overrides.cleaveValue)
+    : 1,
 })
 
 export const makeTarget = (overrides = {}) => ({

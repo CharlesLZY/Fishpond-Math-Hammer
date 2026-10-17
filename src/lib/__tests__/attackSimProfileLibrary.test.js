@@ -7,7 +7,7 @@ import {
   parseAttackerProfileLibrary,
   parseDefenderProfileLibrary,
 } from '../attackSimProfileLibrary'
-import { hydrateAttackerProfile, serializeAttackerProfile } from '../attackSimProfiles'
+import { hydrateAttackerProfile, makeWeapon, serializeAttackerProfile } from '../attackSimProfiles'
 
 const weapon = {
   id: 10,
@@ -38,6 +38,98 @@ const targetWithoutId = { ...target }
 delete targetWithoutId.id
 
 describe('Attack Simulator profile-library transfer', () => {
+  it('defaults Blast and Cleave X to 1 for new and legacy weapon profiles', () => {
+    expect(makeWeapon()).toMatchObject({ blastValue: 1, cleaveValue: 1 })
+    const legacy = Object.freeze({ ...weapon, blast: true })
+    const hydrated = hydrateAttackerProfile({ weapons: [legacy] })
+
+    expect(hydrated.weapons[0]).toMatchObject({
+      blast: true,
+      blastValue: 1,
+      cleaveEnabled: false,
+      cleaveValue: 1,
+    })
+    expect(legacy).not.toHaveProperty('blastValue')
+    expect(legacy).not.toHaveProperty('cleaveValue')
+  })
+
+  it('resets the cancelled Cleave value when normalizing conflicting legacy buffs', () => {
+    const legacy = Object.freeze({
+      ...weapon,
+      blast: true,
+      blastValue: 2,
+      cleaveEnabled: true,
+      cleaveValue: 5,
+    })
+    const serialized = serializeAttackerProfile(hydrateAttackerProfile({ weapons: [legacy] }))
+
+    expect(serialized.weapons[0]).toMatchObject({
+      blast: true,
+      blastValue: 2,
+      cleaveEnabled: false,
+      cleaveValue: 1,
+    })
+    expect(legacy.cleaveEnabled).toBe(true)
+    expect(legacy.cleaveValue).toBe(5)
+  })
+
+  it('resets inactive numeric values when loading older profiles', () => {
+    const legacy = Object.freeze({
+      ...weapon,
+      blast: false,
+      blastValue: 4,
+      cleaveEnabled: false,
+      cleaveValue: 5,
+    })
+    const serialized = serializeAttackerProfile(hydrateAttackerProfile({ weapons: [legacy] }))
+
+    expect(serialized.weapons[0]).toMatchObject({
+      blast: false,
+      blastValue: 1,
+      cleaveEnabled: false,
+      cleaveValue: 1,
+    })
+    expect(legacy.blastValue).toBe(4)
+    expect(legacy.cleaveValue).toBe(5)
+  })
+
+  it.each([
+    [0, 1],
+    [1, 1],
+    [2, 2],
+    [5, 5],
+    [6, 5],
+  ])('round-trips bounded Blast/Cleave X = %i as %i', (value, expected) => {
+    const withValues = { ...weapon, blastValue: value, cleaveValue: value }
+    const library = parseAttackerProfileLibrary(buildAttackerProfileLibraryExport({
+      Squad: {
+        weapons: [
+          { ...withValues, blast: true },
+          { ...withValues, cleaveEnabled: true },
+        ],
+        unitBuffs: null,
+      },
+    }))
+    const serialized = serializeAttackerProfile(hydrateAttackerProfile(library.Squad))
+    const imported = parseAttackerProfileLibrary(buildAttackerProfileLibraryExport({
+      Squad: serialized,
+    }))
+
+    expect(imported.Squad.weapons[0]).toMatchObject({
+      blast: true,
+      blastValue: expected,
+      cleaveEnabled: false,
+      cleaveValue: 1,
+    })
+    expect(imported.Squad.weapons[1]).toMatchObject({
+      blast: false,
+      blastValue: 1,
+      cleaveEnabled: true,
+      cleaveValue: expected,
+    })
+    imported.Squad.weapons.forEach((entry) => expect(entry).not.toHaveProperty('id'))
+  })
+
   it('round-trips shared rerolls as unit buffs rather than weapon-profile abilities', () => {
     const unitBuffs = Object.freeze({
       hitReroll: 'reroll-one',

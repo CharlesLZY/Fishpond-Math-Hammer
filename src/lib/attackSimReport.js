@@ -1,4 +1,4 @@
-import { isTargetUnitBuffsEmpty, isUnitBuffsEmpty } from './dice'
+import { isTargetUnitBuffsEmpty, isUnitBuffsEmpty, normalizeAttackBonusValue } from './dice'
 
 const rerollLabel = (mode, t) => {
   switch (mode) {
@@ -27,9 +27,11 @@ const describeWeapon = (weapon, t) => {
     )
   }
   if (weapon.devastatingWounds) abilities.push(t('devastatingWounds'))
-  if (weapon.blast) abilities.push(t('blast'))
-  if (weapon.cleaveEnabled) {
-    abilities.push(`${t('cleave')} ${weapon.cleaveValue || 1}`)
+  if (weapon.blast) {
+    abilities.push(`${t('blast')} ${normalizeAttackBonusValue(weapon.blastValue)}`)
+  }
+  if (!weapon.blast && weapon.cleaveEnabled) {
+    abilities.push(`${t('cleave')} ${normalizeAttackBonusValue(weapon.cleaveValue)}`)
   }
   if (weapon.plusOneHit) abilities.push(t('plusOneHit'))
   if (weapon.plusOneWound) abilities.push(t('plusOneWound'))

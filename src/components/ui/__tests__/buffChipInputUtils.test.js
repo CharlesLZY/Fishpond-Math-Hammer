@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   antiOptions,
+  cleaveOptions,
   critOptions,
   fnpOptions,
   sustainedOptions,
@@ -25,6 +26,16 @@ describe('sanitizeDraftValue', () => {
 })
 
 describe('findMatchingValue', () => {
+  it('accepts only integers from 1 through 5 for Blast and Cleave', () => {
+    expect(cleaveOptions.map(({ value }) => value)).toEqual(['1', '2', '3', '4', '5'])
+    for (const value of ['1', '2', '3', '4', '5']) {
+      expect(findMatchingValue(value, cleaveOptions)?.value).toBe(value)
+    }
+    for (const value of ['', '0', '-1', '6', '9', '1.5', 'D3']) {
+      expect(findMatchingValue(value, cleaveOptions)).toBeNull()
+    }
+  })
+
   it('accepts Anti values from 2+ through 5+ only', () => {
     expect(findMatchingValue('2+', antiOptions)?.value).toBe('2')
     expect(findMatchingValue('5+', antiOptions)?.value).toBe('5')
@@ -59,6 +70,10 @@ describe('formatDisplayValue', () => {
 })
 
 describe('getAllowedValuesLabel', () => {
+  it.each(['blast', 'cleave'])('shows the 1-5 range for %s', (key) => {
+    expect(getAllowedValuesLabel({ key, valueOptions: cleaveOptions })).toBe('1, 2, 3, 4, 5')
+  })
+
   it('uses the compact sustained-hits hint text', () => {
     expect(getAllowedValuesLabel({ key: 'sustainedHits', valueOptions: sustainedOptions })).toBe('1-9, D3, D6')
   })

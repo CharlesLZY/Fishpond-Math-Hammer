@@ -1,5 +1,8 @@
 import { parseDiceExpression } from './diceExpression'
 
+export const normalizeAttackBonusValue = (value) =>
+  Math.min(5, Math.max(1, Math.trunc(value ?? 1)))
+
 export const normalizeWeaponProfileRerolls = (weapon) => {
   if (!weapon || typeof weapon !== 'object') return weapon
 

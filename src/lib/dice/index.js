@@ -28,7 +28,7 @@ export {
   validateAoSTargetProfile,
   validateAoSWeaponProfile
 } from './aos'
-export { normalizeWeaponProfileRerolls } from './weaponProfile'
+export { normalizeAttackBonusValue, normalizeWeaponProfileRerolls } from './weaponProfile'
 export {
   makeUnitBuffs,
   mergeUnitBuffs,

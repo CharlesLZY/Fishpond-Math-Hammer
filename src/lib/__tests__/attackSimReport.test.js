@@ -109,14 +109,14 @@ describe('buildAttackSimReport', () => {
     const report = build({
       weapons: [
         weapon({ name: 'Torrent', torrent: true }),
+        weapon({ name: 'Cleave', cleaveEnabled: true, cleaveValue: 3 }),
         weapon({
           name: 'Buffed',
           lethalHits: true,
           sustainedHits: 'D3',
           devastatingWounds: true,
           blast: true,
-          cleaveEnabled: true,
-          cleaveValue: 3,
+          blastValue: 2,
           plusOneHit: true,
           plusOneWound: true,
           ignoresCover: true,
@@ -139,7 +139,7 @@ describe('buildAttackSimReport', () => {
       'lethalHits',
       'sustainedHits D3',
       'devastatingWounds',
-      'blast',
+      'blast 2',
       'cleave 3',
       'plusOneHit',
       'plusOneWound',
@@ -152,6 +152,46 @@ describe('buildAttackSimReport', () => {
       'damageReroll: rerollLow123 (rerollScopeSingle)',
     ]
     expected.forEach((entry) => expect(report).toContain(entry))
+  })
+
+  it.each([
+    [undefined, 1],
+    [2, 2],
+    [5, 5],
+    [6, 5],
+  ])('reports default and bounded Blast/Cleave X = %s', (value, expected) => {
+    const report = build({
+      weapons: [
+        weapon({ blast: true, blastValue: value }),
+        weapon({ cleaveEnabled: true, cleaveValue: value }),
+      ],
+    })
+
+    expect(report).toContain(`[blast ${expected}]`)
+    expect(report).toContain(`[cleave ${expected}]`)
+  })
+
+  it('reports only Blast for a conflicting legacy profile', () => {
+    const report = build({
+      weapons: [weapon({
+        blast: true,
+        blastValue: 2,
+        cleaveEnabled: true,
+        cleaveValue: 5,
+      })],
+    })
+
+    expect(report).toContain('[blast 2]')
+    expect(report).not.toContain('cleave')
+  })
+
+  it('omits disabled Blast and Cleave even when their values are set', () => {
+    const report = build({
+      weapons: [weapon({ blastValue: 5, cleaveValue: 5 })],
+    })
+
+    expect(report).not.toContain('blast')
+    expect(report).not.toContain('cleave')
   })
 
   it('includes every per-target defensive buff', () => {

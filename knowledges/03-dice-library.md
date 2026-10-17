@@ -192,9 +192,18 @@ Key rules implemented (see 08-glossary.md for vocabulary):
 - **ANTI-X+**: critical wound on natural X+; wound threshold is also lowered
   to X if better.
 - **Lance**: -1 to the wound threshold (treated as the bearer charging this turn).
-- **Blast**: +`floor(target_models / 5)` to every attack roll. The bonus is
-  snapshotted at the **start of each trial** (target-selection time), so it
-  doesn't shrink as earlier weapons in the same trial kill models.
+- **Blast X / Cleave X**: +`X * floor(target_models / 5)` attacks per weapon
+  instance. Both use an integer X from **1 to 5**, defaulting to **1**.
+  Blast uses `blast` + `blastValue`; Cleave uses `cleaveEnabled` +
+  `cleaveValue` (single-target only, always satisfied in this simulator).
+  They are mutually exclusive: enabling either disables the other.
+  Disabling either buff, manually or by selecting the other, resets its X
+  to 1; re-enabling starts at 1. Inactive values also reset to 1 on profile
+  load. Legacy profiles with both enabled use Blast only.
+  Missing values in older profiles default to 1; active values outside the
+  range are clamped to 1–5. The target count is snapshotted at the **start of each
+  trial** (target-selection time), so the bonus doesn't shrink as earlier
+  weapons in the same trial kill models.
 - **Critical Hit on x+** (`critHitEnabled` + `critHit`): override the crit
   threshold for hit rolls (default 6). Always evaluated against unmodified D6.
 - **Ignores Cover** (`ignoresCover`): cancels Benefit of Cover for this weapon.

@@ -24,6 +24,7 @@ import { DEFAULT_SIMULATIONS, Z_95, REROLL_VALUES, REROLL_SCOPE, randomRerollThr
 import { parseDiceExpression, rollDiceExpr, rollDiceExprWithReroll } from './diceExpression'
 import { mergeWeaponWithUnit } from './unitBuffMerge'
 import { evaluateD6, shouldRerollD6 } from './d6Rerolls'
+import { normalizeAttackBonusValue } from './weaponProfile'
 
 // ---- helpers ---------------------------------------------------------------
 
@@ -161,16 +162,17 @@ const resolveWeaponAgainstUnit = (
   const attackScope = weapon.attackRerollScope === REROLL_SCOPE.SINGLE ? REROLL_SCOPE.SINGLE : REROLL_SCOPE.ALL
   const damageScope = weapon.damageRerollScope === REROLL_SCOPE.SINGLE ? REROLL_SCOPE.SINGLE : REROLL_SCOPE.ALL
 
-  // Blast: +1 attack die "for every five models that were in the target unit
-  // when you selected it as the target". Cleave X (11e): +X attack dice per
-  // five such models, and only when the weapon fires at a single target —
-  // always the case in this single-unit simulator. The shooting unit selects
-  // all targets BEFORE any weapon resolves, so use the unit's size from the
-  // start of this trial, not the live count after earlier kills.
+  // Blast X and Cleave X are mutually exclusive; legacy conflicts prefer Blast.
+  // Either adds X attack dice per five target models.
+  // Cleave's single-target requirement is always met in this simulator.
+  // All targets are selected before any weapon resolves, so use the unit's
+  // size at the start of the trial, not the live count after earlier kills.
   const perFiveTargetModels = Math.floor(blastBaseModels / 5)
-  const blastBonus = weapon.blast ? perFiveTargetModels : 0
-  const cleaveBonus = weapon.cleaveEnabled
-    ? Math.max(1, weapon.cleaveValue || 1) * perFiveTargetModels
+  const blastBonus = weapon.blast
+    ? normalizeAttackBonusValue(weapon.blastValue) * perFiveTargetModels
+    : 0
+  const cleaveBonus = !weapon.blast && weapon.cleaveEnabled
+    ? normalizeAttackBonusValue(weapon.cleaveValue) * perFiveTargetModels
     : 0
   const attackDiceBonus = blastBonus + cleaveBonus
 
@@ -378,7 +380,7 @@ export const simulateAttack = (
       wound: { remaining: unitBuffs?.rerollOneFailedWound ? 1 : 0 },
     }
     // Snapshot of the target unit's size at "target selection" — used by
-    // Blast for every weapon this trial regardless of resolution order.
+    // Blast/Cleave for every weapon this trial regardless of resolution order.
     const blastBaseModels = totalModels
 
     let damageThisTrial = 0

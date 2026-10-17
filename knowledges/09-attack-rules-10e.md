@@ -341,16 +341,28 @@ without splitting the spill behavior.**
 
 ## 6. Special abilities cheat sheet
 
-### 6.1 Blast
+### 6.1 Blast X / Cleave X
 
 > *"Each time you determine how many attacks are made with a Blast
 > weapon, add 1 to the result for every five models that were in the
 > target unit when you selected it as the target (rounding down)."*
 
 ```
-blast_bonus = floor(target_size_at_selection / 5)
+blast_bonus = X * floor(target_size_at_selection / 5)
 attacks_per_weapon = roll(weapon.attacks) + blast_bonus
 ```
+
+The app exposes **Blast X** and **Cleave X** with integer X from **1 to 5**,
+defaulting to **1**. The quoted 10e Blast baseline is Blast 1; Blast 2 adds
+2 attacks per full five target models. Cleave X uses the same bonus
+calculation, with its single-target condition always satisfied here.
+Blast and Cleave are mutually exclusive: selecting either switches off the
+other. Disabling a buff, directly or by selecting the other, resets its X
+to 1, so re-enabling starts at 1. Inactive values also reset to 1 when
+loading profiles. Legacy profiles with both enabled use Blast only and
+reset Cleave X to 1; their bonuses never stack.
+Older profiles without X retain the default of 1; out-of-range active
+values are clamped to 1–5.
 
 The bonus is locked in at **target selection time**, which RAW happens
 before any of the attacking unit's weapons resolve. We snapshot
@@ -460,7 +472,7 @@ When modifying `attackSimulation.js`, verify each of these still holds:
 - [ ] Damage floors at 1; `damageOne` overrides Half/Minus.
 - [ ] Damage from one attack does not spill across models (return at model death).
 - [ ] DW: deferred until after all weapons fire; mortals do not spill across models; damage modifiers still apply.
-- [ ] Blast: floor(snapshot_size / 5), one snapshot per shooting unit (i.e. per trial in our model).
+- [ ] Blast X / Cleave X: mutually exclusive, X * floor(snapshot_size / 5), X defaults to 1 and is limited to 1–5; one snapshot per shooting unit (i.e. per trial in our model).
 - [ ] Lethal Hits applies only to the original crit, not Sustained extras.
 - [ ] Sustained Hits adds N auto-hits per crit; extras don't trigger Lethal or further Sustained.
 - [ ] Anti-X+: crit wound threshold = X; wound succeeds at X+ if better than S/T.

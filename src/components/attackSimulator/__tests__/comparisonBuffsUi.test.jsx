@@ -112,6 +112,87 @@ describe('comparison Profile names', () => {
   })
 })
 
+describe('Blast and Cleave numeric editors and summaries', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', { getItem: () => null })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it.each([
+    ['en', 'BLAST', 'CLEAVE'],
+    ['zh', '爆炸', '劈砍'],
+  ])('renders only the selected inline numeric input in %s', (lang, blastLabel, cleaveLabel) => {
+    vi.stubGlobal('localStorage', { getItem: () => lang })
+
+    for (const [label, otherLabel, value, flags] of [
+      [blastLabel, cleaveLabel, 2, { blast: true }],
+      [cleaveLabel, blastLabel, 5, { cleaveEnabled: true }],
+    ]) {
+      const profile = makeWeapon({ blastValue: 2, cleaveValue: 5, ...flags })
+      const html = render(<WeaponBuffsEditor profile={profile} onChange={vi.fn()} />)
+
+      expect(buttonAttributes(html, label)).toContain('aria-pressed="true"')
+      expect(buttonAttributes(html, otherLabel)).toContain('aria-pressed="false"')
+      expect(inputMarkup(html, `${label} value`)).toContain(`value="${value}"`)
+      expect(inputMarkup(html, `${label} value`)).toContain('title="1, 2, 3, 4, 5"')
+      expect(inputMarkup(html, `${otherLabel} value`)).toBeUndefined()
+    }
+  })
+
+  it.each([
+    [undefined, 1],
+    [2, 2],
+    [5, 5],
+    [6, 5],
+  ])('keeps editor values and summaries consistent for X = %s', (value, expected) => {
+    for (const [key, label, flags] of [
+      ['blast', 'BLAST', { blast: true }],
+      ['cleave', 'CLEAVE', { cleaveEnabled: true }],
+    ]) {
+      const profile = {
+        ...makeWeapon(flags),
+        blastValue: value,
+        cleaveValue: value,
+      }
+      const html = render(<WeaponBuffsEditor profile={profile} onChange={vi.fn()} />)
+
+      expect(inputMarkup(html, `${label} value`)).toContain(`value="${expected}"`)
+      expect(buildWeaponSummary(profile, null, (key) => key)).toEqual([
+        { key, label: `${key} ${expected}`, upgraded: false },
+      ])
+    }
+  })
+
+  it('shows only Blast for a conflicting legacy profile', () => {
+    const profile = {
+      ...makeWeapon({ blast: true, blastValue: 2 }),
+      cleaveEnabled: true,
+      cleaveValue: 5,
+    }
+    const html = render(<WeaponBuffsEditor profile={profile} onChange={vi.fn()} />)
+
+    expect(buttonAttributes(html, 'BLAST')).toContain('aria-pressed="true"')
+    expect(buttonAttributes(html, 'CLEAVE')).toContain('aria-pressed="false"')
+    expect(inputMarkup(html, 'BLAST value')).toContain('value="2"')
+    expect(inputMarkup(html, 'CLEAVE value')).toBeUndefined()
+    expect(buildWeaponSummary(profile, null, (key) => key)).toEqual([
+      { key: 'blast', label: 'blast 2', upgraded: false },
+    ])
+  })
+
+  it('hides numeric inputs and summary chips while both buffs are disabled', () => {
+    const profile = makeWeapon({ blastValue: 5, cleaveValue: 5 })
+    const html = render(<WeaponBuffsEditor profile={profile} onChange={vi.fn()} />)
+
+    expect(inputMarkup(html, 'BLAST value')).toBeUndefined()
+    expect(inputMarkup(html, 'CLEAVE value')).toBeUndefined()
+    expect(buildWeaponSummary(profile, null, (key) => key)).toEqual([])
+  })
+})
+
 describe('comparison additional-buff editors and read-only origins', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', { getItem: () => null })
