@@ -33,6 +33,7 @@ function FormSelect({
     <Select
       styles={styles ?? baseStyles}
       isSearchable={isSearchable}
+      components={{ ClearIndicator: null }}
       maxMenuHeight={maxMenuHeight ?? viewportHeight}
       menuPlacement={menuPlacement}
       {...rest}

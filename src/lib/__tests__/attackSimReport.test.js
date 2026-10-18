@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildAttackSimReport } from '../attackSimReport'
+import { buildAttackSimReport, buildMultiUnitAttackSimReport } from '../attackSimReport'
 
-const t = (key, value) =>
-  key === 'reportIterations' ? `${value} iterations` : key
+const t = (key, value) => {
+  if (key === 'reportIterations') return `${value} iterations`
+  if (key === 'attackerUnit') return `Unit ${value}`
+  return key
+}
 
 const weapon = (overrides = {}) => ({
   name: 'Weapon',
@@ -103,6 +106,87 @@ const build = ({
     result,
     t
   )
+
+describe('buildMultiUnitAttackSimReport', () => {
+  it('groups weapons and buffs by unit, including repeated and unsaved profiles', () => {
+    const report = buildMultiUnitAttackSimReport(
+      [
+        {
+          name: 'Squad',
+          weapons: [weapon({ name: 'Alpha' })],
+          unitBuffs: attackerUnitBuffs({ rerollOneFailedHit: true }),
+        },
+        {
+          name: 'Squad',
+          weapons: [weapon({ name: 'Beta' })],
+          unitBuffs: attackerUnitBuffs({ rerollOneFailedWound: true }),
+        },
+        { weapons: [weapon({ name: 'Gamma' })] },
+      ],
+      [target()],
+      defenderUnitBuffs(),
+      null,
+      t
+    )
+    const [, first, second, third] = report.split(/### Unit \d[^\n]*\n/)
+
+    expect(report).toContain('### Unit 1 - Squad')
+    expect(report).toContain('### Unit 2 - Squad')
+    expect(report).toContain('### Unit 3\n')
+    expect(first).toContain('- Alpha:')
+    expect(first).toContain('#### unitBuffsSection')
+    expect(first).toContain('- rerollOneFailedHit')
+    expect(first).not.toContain('rerollOneFailedWound')
+    expect(second).toContain('- Beta:')
+    expect(second).toContain('- rerollOneFailedWound')
+    expect(second).not.toContain('rerollOneFailedHit')
+    expect(third).toContain('- Gamma:')
+    expect(third).not.toContain('unitBuffsSection')
+    expect(report.match(/^## reportDefender$/gm)).toHaveLength(1)
+  })
+
+  it('reports the shared defender and aggregate results only once', () => {
+    const unit = {
+      weapons: [weapon()],
+      unitBuffs: attackerUnitBuffs(),
+    }
+    const report = buildMultiUnitAttackSimReport(
+      [unit, unit, unit],
+      [target()],
+      defenderUnitBuffs({ minusOneDamage: true }),
+      {
+        numSimulations: 1000,
+        expectedKills: 3,
+        expectedKillsStdDev: 1,
+        expectedKillsCILow: 1,
+        expectedKillsCIHigh: 5,
+        wipeProbability: 25,
+        wipeProbabilityStdDev: 1,
+        wipeProbabilityCILow: 23,
+        wipeProbabilityCIHigh: 27,
+        perProfile: [],
+      },
+      t
+    )
+
+    expect(report.match(/^## reportDefender$/gm)).toHaveLength(1)
+    expect(report.match(/^## reportResults/gm)).toHaveLength(1)
+    expect(report.match(/^- damageMinus1$/gm)).toHaveLength(1)
+    expect(report).toContain('- reportExpectedKills: 3.00')
+    expect(report).toContain('- reportWipeChance: 25.00%')
+  })
+
+  it('retains the existing single-unit report format', () => {
+    const weapons = [weapon()]
+    const targets = [target()]
+    const unitBuffs = attackerUnitBuffs({ rerollOneFailedHit: true })
+    const defenderBuffs = defenderUnitBuffs()
+
+    expect(buildMultiUnitAttackSimReport(
+      [{ weapons, unitBuffs }], targets, defenderBuffs, null, t
+    )).toBe(build({ weapons, targets, unitBuffs, defenderBuffs }))
+  })
+})
 
 describe('buildAttackSimReport', () => {
   it('includes every configurable weapon ability and reroll', () => {

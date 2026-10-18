@@ -7,7 +7,6 @@ import {
   duplicateProfileItem,
   makeTarget,
   makeWeapon,
-  moveProfileItem,
   nextProfileName,
 } from '../../lib/attackSimProfiles'
 import { useT } from '../attackSim/lang'
@@ -22,6 +21,7 @@ export function AttackerProfileWorkspace({
   onWeaponsChange,
   onUnitBuffsChange,
   onEdit,
+  embedded = false,
 }) {
   const { t } = useT()
   const commitWeapons = (next) => {
@@ -37,7 +37,7 @@ export function AttackerProfileWorkspace({
   )
 
   return (
-    <section className="attack-sim-unit-group">
+    <section className={embedded ? 'attack-sim-unit-workspace' : 'attack-sim-unit-group'}>
       <header className="attack-sim-unit-group-header">
         <h3>{t('unitBuffsSection')}</h3>
       </header>
@@ -51,7 +51,6 @@ export function AttackerProfileWorkspace({
             key={weapon.id}
             profile={weapon}
             index={index}
-            total={weapons.length}
             upgrades={upgrades[index]}
             unitBuffs={unitBuffs}
             onChange={(next) =>
@@ -69,12 +68,6 @@ export function AttackerProfileWorkspace({
                 weapons.filter((_, itemIndex) => itemIndex !== index)
               )
             }}
-            onMoveUp={() =>
-              commitWeapons(moveProfileItem(weapons, index, index - 1))
-            }
-            onMoveDown={() =>
-              commitWeapons(moveProfileItem(weapons, index, index + 1))
-            }
             onDuplicate={() => {
               const next = weapons.slice()
               next.splice(index + 1, 0, duplicateProfileItem(weapon))
@@ -105,6 +98,7 @@ export function DefenderProfileWorkspace({
   onTargetsChange,
   onDefenderUnitBuffsChange,
   onEdit,
+  embedded = false,
 }) {
   const { t } = useT()
   const commitTargets = (next) => {
@@ -120,7 +114,7 @@ export function DefenderProfileWorkspace({
   )
 
   return (
-    <section className="attack-sim-unit-group">
+    <section className={embedded ? 'attack-sim-unit-workspace' : 'attack-sim-unit-group'}>
       <header className="attack-sim-unit-group-header">
         <h3>{t('unitBuffsSection')}</h3>
       </header>
@@ -137,7 +131,6 @@ export function DefenderProfileWorkspace({
             key={target.id}
             profile={target}
             index={index}
-            total={targets.length}
             upgrades={upgrades[index]}
             onChange={(next) =>
               commitTargets(
@@ -152,12 +145,6 @@ export function DefenderProfileWorkspace({
                 targets.filter((_, itemIndex) => itemIndex !== index)
               )
             }}
-            onMoveUp={() =>
-              commitTargets(moveProfileItem(targets, index, index - 1))
-            }
-            onMoveDown={() =>
-              commitTargets(moveProfileItem(targets, index, index + 1))
-            }
             onDuplicate={() => {
               const next = targets.slice()
               next.splice(index + 1, 0, duplicateProfileItem(target))

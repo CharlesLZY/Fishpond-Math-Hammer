@@ -92,6 +92,15 @@ const translations = {
     defenderSection: 'Defender Profiles',
     addWeapon: '+ Add Weapon',
     addProfile: '+ Add Profile',
+    attackerUnit: (n) => `Unit ${n}`,
+    expandAttackerUnit: (name) => `Expand ${name}`,
+    collapseAttackerUnit: (name) => `Collapse ${name}`,
+    addAttackerUnit: '+ Add Unit',
+    removeAttackerUnit: (n) => `Remove unit ${n}`,
+    savedAttackerUnitGroup: (n) => `Saved profiles for unit ${n}`,
+    loadAttackerUnitProfile: (n) => `Load saved profile for unit ${n}`,
+    invalidUnitWeaponExpression: (unit, weapon, field, value) =>
+      `${unit}: weapon "${weapon}" has invalid ${field} "${value}".`,
 
     // Unit buffs
     unitBuffsSection: 'Unit Buffs',
@@ -302,6 +311,15 @@ const translations = {
     defenderSection: '防御方 — 目标面板',
     addWeapon: '+ 添加武器',
     addProfile: '+ 添加面板',
+    attackerUnit: (n) => `单位 ${n}`,
+    expandAttackerUnit: (name) => `展开${name}`,
+    collapseAttackerUnit: (name) => `折叠${name}`,
+    addAttackerUnit: '+ 添加单位',
+    removeAttackerUnit: (n) => `移除单位 ${n}`,
+    savedAttackerUnitGroup: (n) => `单位 ${n} 的已保存面板`,
+    loadAttackerUnitProfile: (n) => `为单位 ${n} 加载已保存面板`,
+    invalidUnitWeaponExpression: (unit, weapon, field, value) =>
+      `${unit}：武器“${weapon}”的${field}“${value}”无效。`,
 
     // Unit buffs
     unitBuffsSection: '单位加成',

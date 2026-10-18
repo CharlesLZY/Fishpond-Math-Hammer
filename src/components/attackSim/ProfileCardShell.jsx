@@ -28,12 +28,16 @@ function ProfileCardShell({
           placeholder={placeholder}
         />
         <div className="profile-card-actions">
-          <button type="button" title={label('moveUp')} onClick={onMoveUp} disabled={index === 0}>
-            <ArrowUp size={14} />
-          </button>
-          <button type="button" title={label('moveDown')} onClick={onMoveDown} disabled={index === total - 1}>
-            <ArrowDown size={14} />
-          </button>
+          {onMoveUp && (
+            <button type="button" title={label('moveUp')} onClick={onMoveUp} disabled={index === 0}>
+              <ArrowUp size={14} />
+            </button>
+          )}
+          {onMoveDown && (
+            <button type="button" title={label('moveDown')} onClick={onMoveDown} disabled={index === total - 1}>
+              <ArrowDown size={14} />
+            </button>
+          )}
           <button type="button" title={label('duplicate')} onClick={onDuplicate}>
             <Copy size={14} />
           </button>

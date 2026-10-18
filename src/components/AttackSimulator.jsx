@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ClipboardCopy } from 'lucide-react'
 import {
-  simulateAttack,
+  simulateMultiUnitAttack,
   isValidDiceExpression,
-  makeUnitBuffs,
   makeTargetUnitBuffs,
   mergeTargetWithUnit,
 } from '../lib/dice'
@@ -20,31 +19,34 @@ import {
   validateWeaponShape,
 } from '../lib/attackSimProfileLibrary'
 import {
+  createDefaultAttackerProfile,
+  createProfileId,
   hydrateAttackerProfile,
   hydrateDefenderProfile,
   makeTarget,
-  makeWeapon,
   serializeAttackerProfile,
   serializeDefenderProfile,
 } from '../lib/attackSimProfiles'
-import { buildAttackSimReport } from '../lib/attackSimReport'
+import { buildMultiUnitAttackSimReport } from '../lib/attackSimReport'
 import { StatCard, StatGrid, DistributionChart } from './ui'
 import SavedSetControls from './ui/SavedSetControls'
 import ProfileNameDialog from './attackSimulator/ProfileNameDialog'
+import AttackerUnitCard from './attackSimulator/AttackerUnitCard'
 import { useT } from './attackSim/lang'
-import {
-  AttackerProfileWorkspace,
-  DefenderProfileWorkspace,
-} from './attackSimulator/ProfileWorkspaces'
+import { DefenderProfileWorkspace } from './attackSimulator/ProfileWorkspaces'
+
+const createAttackerUnit = () => ({
+  id: createProfileId(),
+  name: '',
+  ...createDefaultAttackerProfile(),
+})
 
 function AttackSimulator() {
-  const [weapons, setWeapons] = useState(() => [
-    makeWeapon({ name: 'Weapon 1' }),
-  ])
+  const { t } = useT()
+  const [attackerUnits, setAttackerUnits] = useState(() => [createAttackerUnit()])
   const [targets, setTargets] = useState(() => [
     makeTarget({ name: 'Profile 1' }),
   ])
-  const [unitBuffs, setUnitBuffs] = useState(() => makeUnitBuffs())
   const [defenderUnitBuffs, setDefenderUnitBuffs] = useState(() =>
     makeTargetUnitBuffs()
   )
@@ -54,10 +56,12 @@ function AttackSimulator() {
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
   const [savedWeaponSets, setSavedWeaponSets] = useState(() => listSavedWeaponSets())
-  const [selectedWeaponSet, setSelectedWeaponSet] = useState('')
   const [savedTargetSets, setSavedTargetSets] = useState(() => listSavedTargetSets())
   const [selectedTargetSet, setSelectedTargetSet] = useState('')
-  const [namingSide, setNamingSide] = useState(null)
+  const [namingProfile, setNamingProfile] = useState(null)
+  const namingAttacker = namingProfile?.side === 'attacker'
+  const namingUnit = attackerUnits.find((unit) => unit.id === namingProfile?.unitId)
+  const namingSelectedName = namingAttacker ? namingUnit?.name || '' : selectedTargetSet
 
   useEffect(() => {
     if (!toast) return
@@ -72,18 +76,31 @@ function AttackSimulator() {
 
   const refreshWeaponSets = () => setSavedWeaponSets(listSavedWeaponSets())
 
-  const handleSaveWeaponSet = (name) => {
-    if (!saveNamedWeaponSet(name, serializeAttackerProfile({ weapons, unitBuffs }))) {
+  const updateAttackerUnit = (unitId, patch) => {
+    setAttackerUnits((current) =>
+      current.map((unit) => unit.id === unitId ? { ...unit, ...patch } : unit)
+    )
+    invalidateResult()
+  }
+
+  const handleSaveWeaponSet = (unitId, name) => {
+    const unit = attackerUnits.find((entry) => entry.id === unitId)
+    if (!unit) throw new Error(t('profileSaveFailed'))
+    if (!saveNamedWeaponSet(name, serializeAttackerProfile(unit))) {
       throw new Error(t('storageUnavailable'))
     }
     refreshWeaponSets()
-    setSelectedWeaponSet(name)
+    setAttackerUnits((current) =>
+      current.map((entry) => entry.id === unitId ? { ...entry, name } : entry)
+    )
     setToast({ kind: 'success', message: t('profileSaved', t('attackerProfile'), name) })
   }
 
-  const handleLoadWeaponSet = (name) => {
-    setSelectedWeaponSet(name)
-    if (!name) return
+  const handleLoadWeaponSet = (unitId, name) => {
+    if (!name) {
+      updateAttackerUnit(unitId, { name: '' })
+      return
+    }
     const data = loadNamedWeaponSet(name)
     if (!data || !Array.isArray(data.weapons) || data.weapons.length === 0) {
       setToast({ kind: 'error', message: t('profileLoadFailed', t('attackerProfile'), name) })
@@ -97,10 +114,7 @@ function AttackSimulator() {
       }
     }
     const hydrated = hydrateAttackerProfile(data)
-    setWeapons(hydrated.weapons)
-    setUnitBuffs(hydrated.unitBuffs)
-    setResult(null)
-    setError(null)
+    updateAttackerUnit(unitId, { ...hydrated, name })
     setToast({ kind: 'success', message: t('profileLoaded', t('attackerProfile'), name) })
   }
 
@@ -141,14 +155,23 @@ function AttackSimulator() {
   const handleRun = (e) => {
     e?.preventDefault?.()
     setError(null)
-    for (const w of weapons) {
-      if (!isValidDiceExpression(w.attacks)) {
-        setError(`Weapon "${w.name || 'unnamed'}" has invalid Attacks "${w.attacks}".`)
-        return
-      }
-      if (!isValidDiceExpression(w.damage)) {
-        setError(`Weapon "${w.name || 'unnamed'}" has invalid Damage "${w.damage}".`)
-        return
+    for (const [index, unit] of attackerUnits.entries()) {
+      const unitLabel = unit.name
+        ? `${t('attackerUnit', index + 1)} (${unit.name})`
+        : t('attackerUnit', index + 1)
+      for (const weapon of unit.weapons) {
+        for (const [field, label] of [['attacks', 'attacks'], ['damage', 'damage']]) {
+          if (!isValidDiceExpression(weapon[field])) {
+            setError(t(
+              'invalidUnitWeaponExpression',
+              unitLabel,
+              weapon.name || t('weapons'),
+              t(label),
+              weapon[field]
+            ))
+            return
+          }
+        }
       }
     }
     if (targets.length === 0) {
@@ -160,7 +183,7 @@ function AttackSimulator() {
     const effectiveTargets = targets.map((tg) => mergeTargetWithUnit(tg, defenderUnitBuffs))
     setTimeout(() => {
       try {
-        const res = simulateAttack(weapons, effectiveTargets, iterations, unitBuffs)
+        const res = simulateMultiUnitAttack(attackerUnits, effectiveTargets, iterations)
         setResult({ ...res, calculationId: Date.now() })
       } catch (err) {
         setError(err.message || 'Simulation failed.')
@@ -170,14 +193,11 @@ function AttackSimulator() {
     }, 0)
   }
 
-  const { t } = useT()
-
   const handleCopyReport = async () => {
     if (!result) return
-    const text = buildAttackSimReport(
-      weapons,
+    const text = buildMultiUnitAttackSimReport(
+      attackerUnits,
       targets,
-      unitBuffs,
       defenderUnitBuffs,
       result,
       t
@@ -199,15 +219,17 @@ function AttackSimulator() {
         </div>
       )}
 
-      {namingSide && (
+      {namingProfile && (
         <ProfileNameDialog
-          title={t('saveProfileAs', t(namingSide === 'attacker' ? 'attackerProfile' : 'defenderProfile'))}
-          initialName={namingSide === 'attacker' ? selectedWeaponSet : selectedTargetSet}
-          existingNames={namingSide === 'attacker' ? savedWeaponSets : savedTargetSets}
-          replaceName={namingSide === 'attacker' ? selectedWeaponSet : selectedTargetSet}
+          title={t('saveProfileAs', t(namingAttacker ? 'attackerProfile' : 'defenderProfile'))}
+          initialName={namingSelectedName}
+          existingNames={namingAttacker ? savedWeaponSets : savedTargetSets}
+          replaceName={namingSelectedName}
           submitLabel={t('saveProfileAction')}
-          onSubmit={namingSide === 'attacker' ? handleSaveWeaponSet : handleSaveTargetSet}
-          onClose={() => setNamingSide(null)}
+          onSubmit={namingAttacker
+            ? (name) => handleSaveWeaponSet(namingProfile.unitId, name)
+            : handleSaveTargetSet}
+          onClose={() => setNamingProfile(null)}
         />
       )}
 
@@ -216,50 +238,64 @@ function AttackSimulator() {
           <header className="attack-sim-section-header">
             <h2>{t('attackerSection')}</h2>
           </header>
-          <SavedSetControls
-            value={selectedWeaponSet}
-            options={savedWeaponSets}
-            placeholder={t('savedAttackerSets')}
-            emptyLabel={t('noSavedProfiles')}
-            onChange={handleLoadWeaponSet}
-            onSave={() => setNamingSide('attacker')}
-            saveLabel={t('saveProfile')}
-            groupAriaLabel={t('savedAttackerGroup')}
-            selectAriaLabel={t('loadAttackerProfile')}
-          />
-
-          <AttackerProfileWorkspace
-            weapons={weapons}
-            unitBuffs={unitBuffs}
-            onWeaponsChange={setWeapons}
-            onUnitBuffsChange={setUnitBuffs}
-            onEdit={invalidateResult}
-          />
+          {attackerUnits.map((unit, index) => (
+            <AttackerUnitCard
+              key={unit.id}
+              unit={unit}
+              index={index}
+              total={attackerUnits.length}
+              savedProfiles={savedWeaponSets}
+              onLoad={(name) => handleLoadWeaponSet(unit.id, name)}
+              onSave={() => setNamingProfile({ side: 'attacker', unitId: unit.id })}
+              onChange={(patch) => updateAttackerUnit(unit.id, patch)}
+              onRemove={() => {
+                setAttackerUnits((current) =>
+                  current.length > 1
+                    ? current.filter((entry) => entry.id !== unit.id)
+                    : current
+                )
+                invalidateResult()
+              }}
+            />
+          ))}
+          <button
+            type="button"
+            className="add-profile-tile"
+            onClick={() => {
+              setAttackerUnits((current) => [...current, createAttackerUnit()])
+              invalidateResult()
+            }}
+          >
+            {t('addAttackerUnit')}
+          </button>
         </section>
 
         <section className="attack-sim-section">
           <header className="attack-sim-section-header">
             <h2>{t('defenderSection')}</h2>
           </header>
-          <SavedSetControls
-            value={selectedTargetSet}
-            options={savedTargetSets}
-            placeholder={t('savedDefenderSets')}
-            emptyLabel={t('noSavedProfiles')}
-            onChange={handleLoadTargetSet}
-            onSave={() => setNamingSide('defender')}
-            saveLabel={t('saveProfile')}
-            groupAriaLabel={t('savedDefenderGroup')}
-            selectAriaLabel={t('loadDefenderProfile')}
-          />
+          <div className="attack-sim-unit-group defender-unit-card">
+            <SavedSetControls
+              value={selectedTargetSet}
+              options={savedTargetSets}
+              placeholder={t('savedDefenderSets')}
+              emptyLabel={t('noSavedProfiles')}
+              onChange={handleLoadTargetSet}
+              onSave={() => setNamingProfile({ side: 'defender' })}
+              saveLabel={t('saveProfile')}
+              groupAriaLabel={t('savedDefenderGroup')}
+              selectAriaLabel={t('loadDefenderProfile')}
+            />
 
-          <DefenderProfileWorkspace
-            targets={targets}
-            defenderUnitBuffs={defenderUnitBuffs}
-            onTargetsChange={setTargets}
-            onDefenderUnitBuffsChange={setDefenderUnitBuffs}
-            onEdit={invalidateResult}
-          />
+            <DefenderProfileWorkspace
+              embedded
+              targets={targets}
+              defenderUnitBuffs={defenderUnitBuffs}
+              onTargetsChange={setTargets}
+              onDefenderUnitBuffsChange={setDefenderUnitBuffs}
+              onEdit={invalidateResult}
+            />
+          </div>
         </section>
 
         {error && <div className="attack-sim-error">{error}</div>}

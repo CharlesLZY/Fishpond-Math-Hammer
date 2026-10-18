@@ -27,7 +27,13 @@ function SavedSetControls({
         isClearable
         aria-label={selectAriaLabel}
       />
-      <button type="button" className="toolbar-button" onClick={onSave}>
+      <button
+        type="button"
+        className="toolbar-button"
+        aria-label={saveLabel}
+        title={saveLabel}
+        onClick={onSave}
+      >
         <Save size={14} />
         <span>{saveLabel}</span>
       </button>

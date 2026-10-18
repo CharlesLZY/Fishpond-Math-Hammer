@@ -10,6 +10,21 @@ const options = Array.from({ length: 80 }, (_, index) => ({
 }))
 
 describe('shared dropdown menus', () => {
+  it('omits the clear X while preserving the dropdown indicator and selected value', () => {
+    const html = renderToStaticMarkup(
+      <FormSelect
+        options={options}
+        value={options[0]}
+        isClearable
+        classNamePrefix="no-clear"
+      />
+    )
+
+    expect(html).toContain('>Profile 1</div>')
+    expect(html).toContain('no-clear__dropdown-indicator')
+    expect(html).not.toContain('no-clear__clear-indicator')
+  })
+
   it('keeps long placeholders inside the control without clipping or truncating menu options', () => {
     const base = { color: '#808080', gridArea: '1/1/2/3', marginLeft: 2, marginRight: 2 }
     const expected = {
@@ -104,7 +119,7 @@ describe('saved Profile selectors', () => {
     expect(html).toContain('role="combobox"')
     expect(html).toContain('aria-label="Load saved attacker profile"')
     expect(html).toContain('>Squad 80</div>')
-    expect(html).toContain('profile-select__clear-indicator')
+    expect(html).not.toContain('profile-select__clear-indicator')
   })
 
   it('provides only one save action and preserves its callback', () => {

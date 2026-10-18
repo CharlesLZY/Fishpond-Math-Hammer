@@ -18,7 +18,7 @@ export { calculateChargeProbabilities } from './chargeProbability'
 export { simulateKillProbability } from './simulation'
 export { calculateKillProbability } from './killProbability'
 
-export { simulateAttack } from './attackSimulation'
+export { simulateAttack, simulateMultiUnitAttack } from './attackSimulation'
 export {
   AOS_CRIT_EFFECTS,
   calculateAoSDamage,

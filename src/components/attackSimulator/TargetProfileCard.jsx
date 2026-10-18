@@ -28,12 +28,9 @@ const invulnOptions = [
 function TargetProfileCard({
   profile,
   index,
-  total,
   upgrades,
   onChange,
   onRemove,
-  onMoveUp,
-  onMoveDown,
   onDuplicate,
 }) {
   const { t } = useT()
@@ -50,11 +47,7 @@ function TargetProfileCard({
       <ProfileCardShell
         name={profile.name}
         placeholder={`${t('thProfile')} ${index + 1}`}
-        index={index}
-        total={total}
         onNameChange={(name) => update({ name })}
-        onMoveUp={onMoveUp}
-        onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onRemove={onRemove}
       >

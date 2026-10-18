@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { simulateAttack } from '../attackSimulation'
+import { simulateAttack, simulateMultiUnitAttack } from '../attackSimulation'
 import { makeUnitBuffs, mergeUnitBuffs } from '../unitBuffMerge'
 
 // Tiny seeded PRNG (mulberry32) — gives deterministic Monte Carlo runs so
@@ -81,6 +81,195 @@ const mockD6Faces = (...faces) => {
   Math.random = random
   return random
 }
+
+describe('simulateMultiUnitAttack', () => {
+  it('preserves every single-unit result for the same random sequence', () => {
+    const weapons = [
+      baseWeapon({ blast: true, devastatingWounds: true }),
+      baseWeapon({ damage: 'D3', hitReroll: 'reroll-one' }),
+    ]
+    const targets = [
+      baseTarget({ models: 5, wounds: 2 }),
+      baseTarget({ models: 1, wounds: 4, toughness: 8 }),
+    ]
+    const unitBuffs = makeUnitBuffs({
+      rerollOneFailedHit: true,
+      rerollOneFailedWound: true,
+    })
+    const single = simulateAttack(weapons, targets, 200, unitBuffs)
+    Math.random = mulberry32(42)
+
+    expect(simulateMultiUnitAttack([{ weapons, unitBuffs }], targets, 200))
+      .toEqual(single)
+  })
+
+  it('carries a wounded model across three attacking units', () => {
+    const random = mockD6Faces(6, 6, 6)
+    const unit = { weapons: [baseWeapon({ attacks: '1', torrent: true })] }
+    const result = simulateMultiUnitAttack(
+      [unit, unit, unit],
+      [baseTarget({ models: 1, wounds: 3, save: 7 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(1)
+    expect(result.expectedDamage).toBe(3)
+    expect(result.wipeProbability).toBe(100)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('continues with the next defensive profile instead of resetting the target', () => {
+    const random = mockD6Faces(6, 5)
+    const unit = { weapons: [baseWeapon({ attacks: '1', torrent: true })] }
+    const result = simulateMultiUnitAttack(
+      [unit, unit],
+      [
+        baseTarget({ models: 1, save: 7 }),
+        baseTarget({ models: 1, save: 7, toughness: 8 }),
+      ],
+      1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it('stops later units when the shared target has been wiped', () => {
+    const random = mockD6Faces(6)
+    const unit = { weapons: [baseWeapon({ attacks: '1', torrent: true, damage: '6' })] }
+    const result = simulateMultiUnitAttack(
+      [unit, unit, unit],
+      [baseTarget({ models: 1, wounds: 2, save: 7 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(1)
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps unit-granted weapon buffs local without mutating the profiles', () => {
+    const random = mockD6Faces(6, 6)
+    const weapon = Object.freeze(baseWeapon({ attacks: '1', torrent: true }))
+    const unitBuffs = Object.freeze(makeUnitBuffs({ plusOneDamage: true }))
+    const result = simulateMultiUnitAttack(
+      [
+        { weapons: [weapon], unitBuffs },
+        { weapons: [weapon] },
+      ],
+      [baseTarget({ models: 1, wounds: 10, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(3)
+    expect(weapon.damage).toBe('1')
+    expect(unitBuffs.plusOneDamage).toBe(true)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { flag: 'rerollOneFailedHit', overrides: { toHit: 4, lethalHits: true } },
+    { flag: 'rerollOneFailedWound', overrides: { torrent: true } },
+  ])('gives each unit its own $flag budget, shared by its weapons, every trial', ({
+    flag, overrides,
+  }) => {
+    const trialFaces = [2, 6, 2, 2, 6, 2, 2, 6, 2]
+    const random = mockD6Faces(...trialFaces, ...trialFaces)
+    const weapon = baseWeapon({ attacks: '1', ...overrides })
+    const unit = {
+      weapons: [weapon, weapon],
+      unitBuffs: makeUnitBuffs({ [flag]: true }),
+    }
+    const result = simulateMultiUnitAttack(
+      [unit, unit, unit],
+      [baseTarget({ models: 100, save: 7 })],
+      2
+    )
+
+    expect(result.expectedDamage).toBe(3)
+    expect(result.numSimulations).toBe(2)
+    expect(random).toHaveBeenCalledTimes(18)
+  })
+
+  it('does not transfer an unused single-roll budget to the next unit', () => {
+    const random = mockD6Faces(6, 2)
+    const weapon = baseWeapon({ attacks: '1', lethalHits: true })
+    const result = simulateMultiUnitAttack(
+      [
+        { weapons: [weapon], unitBuffs: { rerollOneFailedHit: true } },
+        { weapons: [weapon] },
+      ],
+      [baseTarget({ models: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it('combines both reroll-ones auras with independent single hit and wound rerolls', () => {
+    const unitFaces = [1, 2, 2, 6, 1, 2, 6, 2, 6, 2]
+    const random = mockD6Faces(...unitFaces, ...unitFaces, ...unitFaces)
+    const unit = {
+      weapons: [baseWeapon({ attacks: '4', toHit: 4 })],
+      unitBuffs: makeUnitBuffs({
+        hitReroll: 'reroll-one',
+        woundReroll: 'reroll-one',
+        rerollOneFailedHit: true,
+        rerollOneFailedWound: true,
+      }),
+    }
+    const result = simulateMultiUnitAttack(
+      [unit, unit, unit],
+      [baseTarget({ models: 100, save: 7 })],
+      1
+    )
+
+    expect(result.expectedDamage).toBe(3)
+    expect(random).toHaveBeenCalledTimes(30)
+  })
+
+  it('resolves deferred devastating wounds before the next unit attacks', () => {
+    const random = mockD6Faces(6, 6)
+    const result = simulateMultiUnitAttack(
+      [
+        {
+          weapons: [baseWeapon({
+            attacks: '1', torrent: true, devastatingWounds: true, damage: '2',
+          })],
+        },
+        { weapons: [baseWeapon({ attacks: '1', torrent: true })] },
+      ],
+      [
+        baseTarget({ models: 1, wounds: 1, save: 7 }),
+        baseTarget({ models: 1, wounds: 2, save: 7 }),
+      ],
+      1
+    )
+
+    expect(result.expectedKills).toBe(1)
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { blast: true },
+    { cleaveEnabled: true },
+  ])('snapshots the surviving target count for each unit with %j', (bonus) => {
+    const random = mockD6Faces(6, 6)
+    const result = simulateMultiUnitAttack(
+      [
+        { weapons: [baseWeapon({ attacks: '1', torrent: true })] },
+        { weapons: [baseWeapon({ attacks: '1', torrent: true, ...bonus })] },
+      ],
+      [baseTarget({ models: 5, save: 7 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(2)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+})
 
 describe('simulateAttack — basic correctness', () => {
   it('returns 0 expected kills/damage when no attacks land', () => {

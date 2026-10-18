@@ -6,6 +6,63 @@
  *   • Weapon-buffs modal dialog
  * ============================================================ */
 
+.attacker-unit-card {
+  min-width: 0;
+}
+
+.attacker-unit-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attacker-unit-header .profile-set-controls {
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.attacker-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #f4b942;
+  cursor: pointer;
+}
+
+.attack-simulator-page .attacker-unit-toggle:focus-visible {
+  outline: none;
+  color: #fff;
+}
+
+.attacker-unit-header .toolbar-button {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+.attacker-unit-header .toolbar-button span {
+  display: none;
+}
+
+.attacker-unit-header .profile-set-select {
+  flex: 1;
+}
+
+.attack-sim-unit-group .profile-set-controls {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
 /* ---- Unit Buff group ----
  * The amber-tinted container wraps both the unit-buff editor and every
  * weapon profile card, so the visual scope of "these buffs apply to every
@@ -20,6 +77,13 @@
   background: rgba(244, 185, 66, 0.04);
   border: 1px solid rgba(244, 185, 66, 0.22);
   border-radius: 10px;
+}
+
+.attack-sim-unit-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
 .attack-sim-unit-group-header {

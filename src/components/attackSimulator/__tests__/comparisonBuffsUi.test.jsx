@@ -304,7 +304,7 @@ describe('comparison additional-buff editors and read-only origins', () => {
     expect(inputMarkup(html, 'Wound Reroll')).not.toContain('disabled=""')
     expect(html).toContain('reroll-cell comparison-buff--added')
     expect(html).toContain('buff-chip active comparison-buff--added')
-    expect(html).toContain('unit-buff-select__clear-indicator')
+    expect(html).not.toContain('unit-buff-select__clear-indicator')
   })
 
   it('allows additional defensive choices without displaying the saved layer as editor state', () => {

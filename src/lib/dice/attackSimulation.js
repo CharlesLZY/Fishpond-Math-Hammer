@@ -6,7 +6,8 @@
 //   3. Save roll (best of armor save modified by AP and invuln save)
 //   4. Damage allocation (with -1 damage / half damage; per-point FNP; mortal-FNP for dev wounds)
 //
-// Multiple weapon profiles fire in user-defined order. Multiple target profiles
+// Attacking units fire in list order, with their weapon profiles in user-defined
+// order. Multiple target profiles
 // receive damage in user-defined order: each profile's models are killed off
 // (a wounded model takes successive damage until destroyed) before moving on.
 // Excess damage from a single attack does NOT spill across models (40k rule).
@@ -17,8 +18,8 @@
 // resolved*. They then inflict mortal wounds equal to the attack's Damage
 // characteristic, and — like Hazardous mortals — do NOT spill over to
 // another model when the model they are allocated to is destroyed (excess is
-// lost). We model this by buffering DW damage rolls during the per-weapon
-// loop and draining them once all weapons in `weapons[]` have resolved.
+// lost). We buffer DW damage rolls during each unit's per-weapon loop and
+// drain them before the next attacking unit resolves.
 
 import { DEFAULT_SIMULATIONS, Z_95, REROLL_VALUES, REROLL_SCOPE, randomRerollThreshold } from './constants'
 import { parseDiceExpression, rollDiceExpr, rollDiceExprWithReroll } from './diceExpression'
@@ -165,8 +166,8 @@ const resolveWeaponAgainstUnit = (
   // Blast X and Cleave X are mutually exclusive; legacy conflicts prefer Blast.
   // Either adds X attack dice per five target models.
   // Cleave's single-target requirement is always met in this simulator.
-  // All targets are selected before any weapon resolves, so use the unit's
-  // size at the start of the trial, not the live count after earlier kills.
+  // All of this unit's targets are selected before any of its weapons resolve,
+  // so earlier kills by this unit do not change its attack-dice bonus.
   const perFiveTargetModels = Math.floor(blastBaseModels / 5)
   const blastBonus = weapon.blast
     ? normalizeAttackBonusValue(weapon.blastValue) * perFiveTargetModels
@@ -305,7 +306,7 @@ const resolveWeaponAgainstUnit = (
       // skipping the save. Per 11e RAW these attacks are deferred until all
       // other attacks made by the attacking unit have been resolved — we just
       // roll the damage now and queue it; allocation happens after the weapon
-      // loop in `simulateAttack`.
+      // loop in `simulateMultiUnitAttack`.
       if (woundIsCrit && weapon.devastatingWounds) {
         deferredDevWounds.push(rollDiceExprWithReroll(damageParsed, damageRerollT, damageScope))
         continue
@@ -360,13 +361,15 @@ const buildUnitState = (targetProfiles) => ({
 
 // ---- public entry ----------------------------------------------------------
 
-export const simulateAttack = (
-  weapons,
+export const simulateMultiUnitAttack = (
+  attackerUnits,
   targetProfiles,
-  numSimulations = DEFAULT_SIMULATIONS,
-  unitBuffs = {}
+  numSimulations = DEFAULT_SIMULATIONS
 ) => {
-  const effectiveWeapons = weapons.map((weapon) => mergeWeaponWithUnit(weapon, unitBuffs))
+  const effectiveUnits = attackerUnits.map(({ weapons, unitBuffs }) => ({
+    unitBuffs,
+    weapons: weapons.map((weapon) => mergeWeaponWithUnit(weapon, unitBuffs)),
+  }))
   const totalModels = targetProfiles.reduce((s, p) => s + (p.models || 0), 0)
 
   const totalKillsPerTrial = []
@@ -375,33 +378,33 @@ export const simulateAttack = (
 
   for (let sim = 0; sim < numSimulations; sim++) {
     const state = buildUnitState(targetProfiles)
-    const unitRerollBudgets = {
-      hit: { remaining: unitBuffs?.rerollOneFailedHit ? 1 : 0 },
-      wound: { remaining: unitBuffs?.rerollOneFailedWound ? 1 : 0 },
-    }
-    // Snapshot of the target unit's size at "target selection" — used by
-    // Blast/Cleave for every weapon this trial regardless of resolution order.
-    const blastBaseModels = totalModels
-
     let damageThisTrial = 0
-    // Devastating Wounds attacks are buffered here and resolved AFTER all
-    // weapons (the "attacking unit") have fired, per 11e RAW.
-    const deferredDevWounds = []
-    for (const w of effectiveWeapons) {
-      if (state.activeProfile >= state.profiles.length) break
-      damageThisTrial += resolveWeaponAgainstUnit(
-        w, state, blastBaseModels, deferredDevWounds, unitRerollBudgets
-      )
-    }
 
-    // Drain deferred DW attacks. Each one inflicts mortal wounds equal to its
-    // (already-rolled) Damage characteristic, modified by the active target
-    // profile's defensive damage modifiers, and does NOT spill across models.
-    for (const rawDmg of deferredDevWounds) {
+    for (const { weapons, unitBuffs } of effectiveUnits) {
       if (state.activeProfile >= state.profiles.length) break
-      const t = state.profiles[state.activeProfile]
-      const dmg = modifyDamage(rawDmg, t.halfDamage, t.minusOneDamage, t.damageOne)
-      damageThisTrial += applyDamageToUnit(state, dmg, true)
+      const unitRerollBudgets = {
+        hit: { remaining: unitBuffs?.rerollOneFailedHit ? 1 : 0 },
+        wound: { remaining: unitBuffs?.rerollOneFailedWound ? 1 : 0 },
+      }
+      const blastBaseModels = state.profiles.reduce(
+        (sum, profile) => sum + profile.modelsRemaining, 0
+      )
+      const deferredDevWounds = []
+      for (const weapon of weapons) {
+        if (state.activeProfile >= state.profiles.length) break
+        damageThisTrial += resolveWeaponAgainstUnit(
+          weapon, state, blastBaseModels, deferredDevWounds, unitRerollBudgets
+        )
+      }
+
+      // Drain each unit's deferred wounds before the next unit attacks.
+      // Every attack still loses excess damage at the model boundary.
+      for (const rawDmg of deferredDevWounds) {
+        if (state.activeProfile >= state.profiles.length) break
+        const t = state.profiles[state.activeProfile]
+        const dmg = modifyDamage(rawDmg, t.halfDamage, t.minusOneDamage, t.damageOne)
+        damageThisTrial += applyDamageToUnit(state, dmg, true)
+      }
     }
 
     let killsTotal = 0
@@ -478,3 +481,10 @@ export const simulateAttack = (
     numSimulations: N
   }
 }
+
+export const simulateAttack = (
+  weapons,
+  targetProfiles,
+  numSimulations = DEFAULT_SIMULATIONS,
+  unitBuffs = {}
+) => simulateMultiUnitAttack([{ weapons, unitBuffs }], targetProfiles, numSimulations)

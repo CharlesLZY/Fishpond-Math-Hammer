@@ -16,8 +16,12 @@ const publicAssetExists = (url) => existsSync(fileURLToPath(new URL(`.${url}`, `
 
 describe('11e Force Disposition matrix', () => {
   it('versions both map variants to avoid stale cached images', () => {
-    expect(mapImageUrl('map_02')).toBe('/battleplans-11e/map_02.webp?v=20261018')
-    expect(mapReferenceUrl('map_02')).toBe('/battleplans-11e/map_02_ref.webp?v=20261018')
+    const board = new URL(mapImageUrl('map_02'), 'https://example.invalid')
+    const reference = new URL(mapReferenceUrl('map_02'), 'https://example.invalid')
+    expect(board.pathname).toBe('/battleplans-11e/map_02.webp')
+    expect(reference.pathname).toBe('/battleplans-11e/map_02_ref.webp')
+    expect(board.searchParams.get('v')).toMatch(/^[a-z0-9-]+$/)
+    expect(reference.searchParams.get('v')).toBe(board.searchParams.get('v'))
   })
 
   it('resolves every directed matchup and all of its map and mission card assets', () => {

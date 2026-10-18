@@ -152,26 +152,35 @@ const describeTarget = (target, t) => {
   return head + (buffs.length ? ` [${buffs.join(', ')}]` : '')
 }
 
-export const buildAttackSimReport = (
-  weapons,
+export const buildMultiUnitAttackSimReport = (
+  attackerUnits,
   targets,
-  unitBuffs,
   defenderUnitBuffs,
   result,
   t
 ) => {
   const lines = [`# ${t('pageTitle')}`, '', `## ${t('reportAttacker')}`]
-  weapons.forEach((weapon, index) => {
-    const name = weapon.name?.trim() || `Weapon ${index + 1}`
-    lines.push(`- ${name}: ${describeWeapon(weapon, t)}`)
-  })
-
-  if (!isUnitBuffsEmpty(unitBuffs)) {
-    lines.push('', `### ${t('unitBuffsSection')}`)
-    describeUnitBuffs(unitBuffs, t).forEach((part) => {
-      lines.push(`- ${part}`)
+  const multipleUnits = attackerUnits.length > 1
+  attackerUnits.forEach((unit, unitIndex) => {
+    if (multipleUnits) {
+      const name = unit.name?.trim()
+      lines.push(
+        '',
+        `### ${t('attackerUnit', unitIndex + 1)}${name ? ` - ${name}` : ''}`
+      )
+    }
+    unit.weapons.forEach((weapon, index) => {
+      const name = weapon.name?.trim() || `Weapon ${index + 1}`
+      lines.push(`- ${name}: ${describeWeapon(weapon, t)}`)
     })
-  }
+
+    if (!isUnitBuffsEmpty(unit.unitBuffs)) {
+      lines.push('', `${multipleUnits ? '####' : '###'} ${t('unitBuffsSection')}`)
+      describeUnitBuffs(unit.unitBuffs, t).forEach((part) => {
+        lines.push(`- ${part}`)
+      })
+    }
+  })
 
   lines.push('', `## ${t('reportDefender')}`)
   targets.forEach((target, index) => {
@@ -238,3 +247,18 @@ export const buildAttackSimReport = (
 
   return lines.join('\n')
 }
+
+export const buildAttackSimReport = (
+  weapons,
+  targets,
+  unitBuffs,
+  defenderUnitBuffs,
+  result,
+  t
+) => buildMultiUnitAttackSimReport(
+  [{ weapons, unitBuffs }],
+  targets,
+  defenderUnitBuffs,
+  result,
+  t
+)

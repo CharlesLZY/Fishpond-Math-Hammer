@@ -28,13 +28,10 @@ const toHitWithTorrentOptions = [
 function WeaponProfileCard({
   profile,
   index,
-  total,
   upgrades,
   unitBuffs,
   onChange,
   onRemove,
-  onMoveUp,
-  onMoveDown,
   onDuplicate,
 }) {
   const { t } = useT()
@@ -64,11 +61,7 @@ function WeaponProfileCard({
       <ProfileCardShell
         name={profile.name}
         placeholder={`${t('weapons')} ${index + 1}`}
-        index={index}
-        total={total}
         onNameChange={(name) => update({ name })}
-        onMoveUp={onMoveUp}
-        onMoveDown={onMoveDown}
         onDuplicate={onDuplicate}
         onRemove={onRemove}
       >

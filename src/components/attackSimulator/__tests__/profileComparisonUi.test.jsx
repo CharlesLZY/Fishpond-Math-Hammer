@@ -137,7 +137,7 @@ describe('Profile comparison presentation', () => {
     const simulator = render(<AttackSimulator />)
     expect(simulator).toContain('保存面板')
     expect(simulator).not.toContain('更新面板')
-    expect(simulator).toContain('aria-label="加载已保存的攻击方面板"')
+    expect(simulator).toContain('aria-label="为单位 1 加载已保存面板"')
     expect(simulator).toContain('aria-label="加载已保存的防御方面板"')
   })
 
