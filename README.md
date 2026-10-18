@@ -4,6 +4,18 @@
 
 11e Force Disposition Matrix: https://gdmissions.app/11th/matrix
 
+### 11e map assets
+
+The 2026-10-18 map refresh uses the latest supplied Warhammer 40,000 Event
+Companion PDF. It updates 27 layouts and both their clean-board and annotated
+reference images; the other 18 layouts are unchanged. Terrain remains centrally
+symmetric, including the existing repair to map 01. Objectives and deployment
+boundaries follow the revised PDF and are not symmetrized.
+Both image URL variants carry this revision to avoid stale browser caches.
+
+The updated map IDs are 02, 03, 07, 08, 09, 10, 12, 14, 16, 17, 18, 19, 20, 22,
+24, 26, 31, 32, 34, 35, 36, 37, 38, 39, 41, 44, and 45.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

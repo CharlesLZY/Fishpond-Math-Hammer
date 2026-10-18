@@ -20,6 +20,7 @@ export const MAP_11E_X = Math.round((STAGE_11E_W - MAP_11E_W) / 2)
 export const MAP_11E_Y = Math.round((STAGE_11E_H - MAP_11E_H) / 2)
 
 export const MAP_11E_ASSET_BASE = '/battleplans-11e'
+const MAP_11E_ASSET_REVISION = '20261018'
 export const PRIMARY_MISSION_ASSET_BASE = `${MAP_11E_ASSET_BASE}/primary-missions`
 
 export const FORCE_DISPOSITIONS = [
@@ -112,10 +113,12 @@ export function getMissionCardImages(disposition, mission) {
   }
 }
 
-export const mapImageUrl = (map) => `${MAP_11E_ASSET_BASE}/${map}.webp`
+export const mapImageUrl = (map) =>
+  `${MAP_11E_ASSET_BASE}/${map}.webp?v=${MAP_11E_ASSET_REVISION}`
 
 // The original page map, with deployment shading and printed measurements.
-export const mapReferenceUrl = (map) => `${MAP_11E_ASSET_BASE}/${map}_ref.webp`
+export const mapReferenceUrl = (map) =>
+  `${MAP_11E_ASSET_BASE}/${map}_ref.webp?v=${MAP_11E_ASSET_REVISION}`
 
 /**
  * Resolve the official battleplan for a pairing. `mine` / `theirs` are
