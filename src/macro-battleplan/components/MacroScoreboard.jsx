@@ -49,6 +49,7 @@ export function MacroScoreboard() {
         min={0}
         max={50}
         step={1}
+        aria-label={`${side === 'player' ? state.playerName : state.opponentName} actual VP round ${round}`}
         value={v === '' ? '' : v}
         onChange={(e) => setScore(side, round, e.target.value)}
       />
@@ -57,12 +58,12 @@ export function MacroScoreboard() {
 
   return (
     <div className="mbp-scoreboard">
-      <table className="mbp-scoretable">
+      <table className="mbp-scoretable" aria-label="Actual VP record">
         <thead>
           <tr>
             <th className="mbp-th-side"></th>
             {ROUNDS.map((r) => (
-              <th key={r}>T{r}</th>
+              <th key={r}>R{r}</th>
             ))}
             <th className="mbp-th-total">VP</th>
           </tr>
@@ -75,6 +76,7 @@ export function MacroScoreboard() {
                 <td className="mbp-td-side">
                   <input
                     type="text"
+                    aria-label={side === 'player' ? 'Your name' : 'Opponent name'}
                     value={side === 'player' ? state.playerName : state.opponentName}
                     onChange={(e) =>
                       setScoreboard((s) => ({

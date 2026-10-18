@@ -11,7 +11,7 @@ import { useBoard11eStore } from '../store/board11eStore'
  *  Ctrl/Cmd + Z        undo (last 3 ops)
  *  Ctrl/Cmd + C / V    copy / paste selection
  */
-export function useKeyboardShortcuts() {
+export function useKeyboardShortcuts(enabled = true) {
   const commitMoveSelected = useBoard11eStore((s) => s.commitMoveSelected)
   const rotateSelected = useBoard11eStore((s) => s.rotateSelected)
   const deleteSelected = useBoard11eStore((s) => s.deleteSelected)
@@ -21,6 +21,7 @@ export function useKeyboardShortcuts() {
   const pasteCopied = useBoard11eStore((s) => s.pasteCopied)
 
   useEffect(() => {
+    if (!enabled) return
     const handler = (e) => {
       const target = e.target
       if (
@@ -83,6 +84,7 @@ export function useKeyboardShortcuts() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [
+    enabled,
     commitMoveSelected,
     rotateSelected,
     deleteSelected,

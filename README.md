@@ -28,6 +28,52 @@ their existing single-unit format and behavior.
 
 11e Force Disposition Matrix: https://gdmissions.app/11th/matrix
 
+## 40K Tactical Board
+
+The board has two views. **Battlefield** contains the map and its tools only:
+there are no scores, VP summaries, or mission-card scoring overlays on the map.
+Switching views preserves bases, drawings, selections, and the map tools.
+Map keyboard shortcuts are disabled while viewing **Missions & VP**.
+
+**Missions & VP** uses the same sections and segmented controls as Battlefield.
+A single **Attacker / Defender** switch above both mission sections controls
+the primary and secondary inputs together. There are no player-name labels,
+explanatory paragraphs, or primary mission-name labels:
+
+- Primary scoring is a vertical R1-R5 table with three manual inputs per row
+  and no visible stage captions. There is no 15 VP per-round limit; the
+  primary total is capped at **45 VP**. Primary card references
+  follow the Force Disposition matchup.
+  Changing a primary mission clears that side's primary targets after a
+  confirmation; changing only the layout preserves the plan.
+- All 18 Tactical secondary missions can be included, excluded, or left
+  undecided. Scores start blank and including a card does not fill in a score.
+  Enter each card's target directly as a whole number from 0 to
+  5 VP, or clear it while planning; saved manual values are preserved and
+  scores are not restricted to a dropdown
+  of printed scoring tiers. Compact cards show the score followed by VP,
+  without a Target prefix. Click a card's name to view the locally bundled
+  original PNG. There are no task notes or secondary round assignments.
+- The secondary summary shows **Selected pool X/45 VP**, with no separate
+  Planning cap line. X is the raw selected pool, so excess candidate points
+  remain visible while overview scores are capped at 45. This is a potential scoring
+  budget, not a prediction: draw order, battlefield conditions, and the 15 VP
+  secondary limit per battle round are not simulated. Fixed scoring and
+  Battle Ready VP are not included.
+
+Plans save in browser storage and are included in battleplan JSON exports.
+Existing v1 exports remain supported: their names and recorded scores are
+preserved, but the recorded-score panel is no longer displayed. Recorded
+scores are not converted into plans; files without a mission plan start
+with an empty plan. Older plans with one primary total per round migrate that
+value into the middle scoring field, preserving the total and leaving the other fields
+blank. Stage entries, including zeroes and blanks, survive reloads and exports.
+
+Secondary cards and Tactical scoring tiers:
+[GDM secondary missions](https://gdmissions.app/11th/secondary-missions).
+Scoring limits:
+[GDM tournament companion](https://gdmissions.app/11th/rules/event-companion).
+
 ### 11e map assets
 
 The 2026-10-18 map refresh uses the latest supplied Warhammer 40,000 Event

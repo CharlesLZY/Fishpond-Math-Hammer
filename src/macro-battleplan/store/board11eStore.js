@@ -12,6 +12,12 @@ import {
   LAYOUTS,
   getDisposition,
 } from '../config/battleplans11e'
+import {
+  createMissionPlan,
+  emptyPrimaryTargets,
+  getChangedPrimarySides,
+  sanitizeMissionPlan,
+} from '../config/missionPlanning11e'
 
 export const EXPORT_11E_SCHEMA = 'fishpond-mathhammer-battleplan-11e/v1'
 
@@ -19,6 +25,9 @@ const HISTORY_LIMIT = 3
 const PASTE_OFFSET_PX = 18
 const SETUP_STORAGE_KEY = 'macroBattleplan11e:setup'
 const SCOREBOARD_STORAGE_KEY = 'macroBattleplan11e:scoreboard'
+const MISSION_PLAN_STORAGE_KEY = 'macroBattleplan11e:missionPlan'
+const MISSION_PLAN_STORAGE_WARNING =
+  'Your mission plan could not be saved to browser storage. Export the board to keep your changes.'
 
 let clipboard = []
 
@@ -68,7 +77,8 @@ const readJson = (key) => {
   try {
     const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : null
-  } catch {
+  } catch (error) {
+    console.warn(`Could not read tactical board storage (${key}).`, error)
     return null
   }
 }
@@ -76,8 +86,10 @@ const readJson = (key) => {
 const writeJson = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Ignore quota / private-mode failures; the board stays usable.
+    return true
+  } catch (error) {
+    console.warn(`Could not save tactical board storage (${key}).`, error)
+    return false
   }
 }
 
@@ -130,12 +142,39 @@ export const useBoard11eStore = create((set, get) => {
     history: [],
     setup: sanitizeSetup(readJson(SETUP_STORAGE_KEY)),
     scoreboard: sanitizeScoreboard(readJson(SCOREBOARD_STORAGE_KEY)),
+    missionPlan: sanitizeMissionPlan(readJson(MISSION_PLAN_STORAGE_KEY)),
+    missionPlanStorageError: null,
 
     setSetup: (patch) =>
       set((s) => {
         const next = sanitizeSetup({ ...s.setup, ...patch })
+        const changedSides = getChangedPrimarySides(s.setup, next)
+        const missionPlan = {
+          ...s.missionPlan,
+          primary: { ...s.missionPlan.primary },
+        }
+        for (const side of changedSides) {
+          missionPlan.primary[side] = emptyPrimaryTargets()
+        }
         writeJson(SETUP_STORAGE_KEY, next)
-        return { setup: next }
+        if (changedSides.length === 0) return { setup: next }
+        const saved = writeJson(MISSION_PLAN_STORAGE_KEY, missionPlan)
+        return {
+          setup: next,
+          missionPlan,
+          missionPlanStorageError: saved ? null : MISSION_PLAN_STORAGE_WARNING,
+        }
+      }),
+
+    setMissionPlan: (updater) =>
+      set((s) => {
+        const next = typeof updater === 'function' ? updater(s.missionPlan) : updater
+        const missionPlan = sanitizeMissionPlan(next)
+        const saved = writeJson(MISSION_PLAN_STORAGE_KEY, missionPlan)
+        return {
+          missionPlan,
+          missionPlanStorageError: saved ? null : MISSION_PLAN_STORAGE_WARNING,
+        }
       }),
 
     setScoreboard: (updater) =>
@@ -320,13 +359,22 @@ export const useBoard11eStore = create((set, get) => {
     },
 
     clearAllStorage: () => {
-      try {
-        localStorage.removeItem(SETUP_STORAGE_KEY)
-        localStorage.removeItem(SCOREBOARD_STORAGE_KEY)
-      } catch {
-        /* ignore */
+      let failed = false
+      for (const key of [SETUP_STORAGE_KEY, SCOREBOARD_STORAGE_KEY, MISSION_PLAN_STORAGE_KEY]) {
+        try {
+          localStorage.removeItem(key)
+        } catch (error) {
+          failed = true
+          console.warn(`Could not clear tactical board storage (${key}).`, error)
+        }
       }
-      set({ scoreboard: initialScoreboard() })
+      set({
+        scoreboard: initialScoreboard(),
+        missionPlan: createMissionPlan(),
+        missionPlanStorageError: failed
+          ? 'Browser storage could not be cleared. Previously saved data may return after reloading.'
+          : null,
+      })
     },
 
     exportBoard: () => {
@@ -357,6 +405,7 @@ export const useBoard11eStore = create((set, get) => {
             points: pointsToIn(d.points),
           })),
           scoreboard: s.scoreboard,
+          missionPlan: s.missionPlan,
         },
         null,
         2,
@@ -394,10 +443,21 @@ export const useBoard11eStore = create((set, get) => {
 
       const setup = sanitizeSetup(data.setup)
       const scoreboard = sanitizeScoreboard(data.scoreboard)
+      const missionPlan = sanitizeMissionPlan(data.missionPlan)
       writeJson(SETUP_STORAGE_KEY, setup)
       writeJson(SCOREBOARD_STORAGE_KEY, scoreboard)
+      const saved = writeJson(MISSION_PLAN_STORAGE_KEY, missionPlan)
       pushHistory()
-      set({ pieces, drawings, selectedIds: [], selectedId: null, setup, scoreboard })
+      set({
+        pieces,
+        drawings,
+        selectedIds: [],
+        selectedId: null,
+        setup,
+        scoreboard,
+        missionPlan,
+        missionPlanStorageError: saved ? null : MISSION_PLAN_STORAGE_WARNING,
+      })
       return true
     },
   }

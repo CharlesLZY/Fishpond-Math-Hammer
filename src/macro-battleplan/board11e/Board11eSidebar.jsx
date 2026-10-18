@@ -1,10 +1,14 @@
 import { useRef } from 'react'
 import { Download, Move, RotateCcw, Upload } from 'lucide-react'
 import { FormSelect } from '../../components/ui'
-import { MacroScoreboard } from '../components/MacroScoreboard'
 import { BasesSection, SelectionSection } from '../components/BaseControls'
 import { useBoard11eStore } from '../store/board11eStore'
 import { FORCE_DISPOSITIONS, LAYOUTS } from '../config/battleplans11e'
+import {
+  getChangedPrimarySides,
+  hasMissionPlan,
+  hasPrimaryTargets,
+} from '../config/missionPlanning11e'
 
 const DISPOSITION_OPTIONS = FORCE_DISPOSITIONS.map((d) => ({
   value: d.id,
@@ -43,6 +47,17 @@ function DispositionSelect({ label, value, onChange }) {
 function BattleplanSection() {
   const setup = useBoard11eStore((s) => s.setup)
   const setSetup = useBoard11eStore((s) => s.setSetup)
+  const missionPlan = useBoard11eStore((s) => s.missionPlan)
+
+  const changeDisposition = (patch) => {
+    const changedSides = getChangedPrimarySides(setup, { ...setup, ...patch })
+    const hasTargets = changedSides.some((side) => hasPrimaryTargets(missionPlan, side))
+    if (
+      hasTargets &&
+      !window.confirm('Changing the matchup clears primary targets for changed missions. Continue?')
+    ) return
+    setSetup(patch)
+  }
 
   return (
     <div className="mbp-section">
@@ -53,12 +68,12 @@ function BattleplanSection() {
         <DispositionSelect
           label="Attacker"
           value={setup.mine}
-          onChange={(mine) => setSetup({ mine })}
+          onChange={(mine) => changeDisposition({ mine })}
         />
         <DispositionSelect
           label="Defender"
           value={setup.theirs}
-          onChange={(theirs) => setSetup({ theirs })}
+          onChange={(theirs) => changeDisposition({ theirs })}
         />
         <div className="mbp-segmented mbp11-layouts">
           {LAYOUTS.map((id) => (
@@ -85,6 +100,8 @@ function BoardSection() {
   const importBoard = useBoard11eStore((s) => s.importBoard)
   const pieces = useBoard11eStore((s) => s.pieces)
   const drawings = useBoard11eStore((s) => s.drawings)
+  const missionPlan = useBoard11eStore((s) => s.missionPlan)
+  const scoreboard = useBoard11eStore((s) => s.scoreboard)
   const isEmpty = pieces.length === 0 && drawings.length === 0
   const fileInputRef = useRef(null)
 
@@ -105,7 +122,13 @@ function BoardSection() {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!isEmpty && !window.confirm('Replace the current board with the imported file?')) return
+    const hasScores = Object.values(scoreboard.scores).some((rounds) =>
+      Object.values(rounds).some((value) => value !== ''),
+    )
+    if (
+      (!isEmpty || hasMissionPlan(missionPlan) || hasScores) &&
+      !window.confirm('Replace the current board, mission plans, and recorded scores with the imported file?')
+    ) return
     try {
       const ok = importBoard(JSON.parse(await file.text()))
       if (!ok) {
@@ -190,7 +213,6 @@ export function Board11eSidebar() {
     <aside className="mbp-tools">
       <div className="mbp-tools__scroll">
         <BattleplanSection />
-        <MacroScoreboard />
         <BasesSection addBase={addBase} addOvalBase={addOvalBase} addRectBase={addRectBase} />
         <SelectionSection />
         <BoardSection />

@@ -36,7 +36,7 @@ function useMapImage(src) {
   return image
 }
 
-export function Board11eCanvas({ containerRef, mapSrc }) {
+export function Board11eCanvas({ containerRef, mapSrc, active = true }) {
   const stageRef = useRef(null)
   const [size, setSize] = useState({ width: 800, height: 600 })
   const pieces = useBoard11eStore((s) => s.pieces)
@@ -53,6 +53,7 @@ export function Board11eCanvas({ containerRef, mapSrc }) {
     const el = containerRef.current
     if (!el) return
     const syncSize = (width, height) => {
+      if (width <= 0 || height <= 0) return
       setSize({
         width: Math.max(0, Math.round(width)),
         height: Math.max(0, Math.round(height)),
@@ -92,7 +93,7 @@ export function Board11eCanvas({ containerRef, mapSrc }) {
     stage.batchDraw()
   }, [size.width, size.height])
 
-  useKeyboardShortcuts()
+  useKeyboardShortcuts(active)
 
   const getStagePointer = () => {
     const stage = stageRef.current
