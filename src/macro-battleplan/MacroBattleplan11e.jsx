@@ -5,6 +5,7 @@
 
 import { useRef, useState } from 'react'
 import { Tabs } from '../components/ui'
+import { BattleplanSetup } from './board11e/BattleplanSetup'
 import { Board11eCanvas } from './board11e/Board11eCanvas'
 import { Board11eSidebar } from './board11e/Board11eSidebar'
 import { MapReferenceButton } from './board11e/MapReferenceButton'
@@ -35,6 +36,7 @@ export default function MacroBattleplan11e() {
 
   return (
     <>
+      <BattleplanSetup />
       <div className="mbp-workspace-tabs">
         <Tabs
           value={activeTab}

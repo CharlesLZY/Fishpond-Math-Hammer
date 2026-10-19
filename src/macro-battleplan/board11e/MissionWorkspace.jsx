@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { BookOpen, Check, X } from 'lucide-react'
+import { Check } from 'lucide-react'
+import { getDisposition } from '../config/battleplans11e'
 import {
   getMissionPlanTotals,
   MISSION_ROUNDS,
@@ -13,11 +14,24 @@ import { useBoard11eStore } from '../store/board11eStore'
 import { MissionCardDialog, MissionCardImage } from './MissionCardDialog'
 import { MissionCardsButton } from './MissionCardsButton'
 
+function MissionSideLabel({ side }) {
+  return (
+    <span className="mbp-mission-side-label">
+      <span className="mbp11-swatch" style={{ backgroundColor: side.color }} aria-hidden="true" />
+      {side.label}
+    </span>
+  )
+}
+
 function PlanOverview({ side, totals }) {
   return (
-    <section className="mbp-section mbp-plan-overview" aria-label={`${side.label} plan overview`}>
+    <section
+      className="mbp-section mbp-plan-overview"
+      aria-label={`${side.label} plan overview`}
+      style={{ '--mbp-side-color': side.color }}
+    >
       <div className="mbp-section__header mbp-plan-overview__heading">
-        <span>{side.label}</span>
+        <MissionSideLabel side={side} />
         <strong>{totals.total}<small> VP</small></strong>
       </div>
       <div className="mbp-plan-overview__metrics">
@@ -54,7 +68,11 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
     return <p role="alert">Select a valid battleplan on the Battlefield tab to plan your missions.</p>
   }
 
-  const activeSideInfo = MISSION_SIDES.find((side) => side.id === activeSide)
+  const sides = MISSION_SIDES.map((side) => ({
+    ...side,
+    color: getDisposition(battleplan[side.battleplanKey].disposition).color,
+  }))
+  const activeSideInfo = sides.find((side) => side.id === activeSide)
   const activeTotals = getMissionPlanTotals(plan, activeSide)
 
   const setPrimaryTarget = (round, phase, raw) => {
@@ -88,7 +106,7 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
       {storageError && <p className="mbp-plan-warning" role="alert">{storageError}</p>}
 
       <div className="mbp-plan-overviews">
-        {MISSION_SIDES.map((side) => (
+        {sides.map((side) => (
           <PlanOverview
             key={side.id}
             side={side}
@@ -98,25 +116,36 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
       </div>
 
       <div className="mbp-segmented mbp-plan-side-switch" role="group" aria-label="Mission scoring side">
-        {MISSION_SIDES.map((side) => (
+        {sides.map((side) => (
           <button
             key={side.id}
             type="button"
             className={`mbp-segmented__btn ${activeSide === side.id ? 'is-active' : ''}`}
+            aria-label={side.label}
             aria-controls="mbp-mission-scores"
             aria-pressed={activeSide === side.id}
             onClick={() => onSideChange(side.id)}
           >
-            {side.label}
+            <MissionSideLabel side={side} />
           </button>
         ))}
       </div>
 
       <div className="mbp-mission-columns" id="mbp-mission-scores">
-        <section className="mbp-section mbp-mission-section" aria-labelledby="mbp-primary-title">
-          <header className="mbp-section__header mbp-mission-section__heading">
-            <h2 id="mbp-primary-title">Primary missions</h2>
-            <MissionCardsButton battleplan={battleplan} />
+        <section className="mbp-section mbp-mission-section" aria-label="Primary missions">
+          <header className="mbp-primary-header">
+            <div className="mbp-section__header mbp-mission-section__heading">
+              <h2 id="mbp-primary-title">Primary missions</h2>
+            </div>
+            <div className="mbp-section__header mbp-mission-section__heading mbp-primary-heading">
+              <MissionCardsButton
+                mission={battleplan[activeSideInfo.battleplanKey]}
+                player={activeSideInfo.label}
+              />
+              <output className="mbp-primary-total" aria-label={`${activeSideInfo.label} primary VP`}>
+                {activeTotals.primary}/{MISSION_VP_CAP} VP
+              </output>
+            </div>
           </header>
           <table className="mbp-primary-table" aria-label={`${activeSideInfo.label} primary scoring`}>
             <tbody>
@@ -141,16 +170,6 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr>
-                <th scope="row" colSpan={3}>Primary VP</th>
-                <td>
-                  <output aria-label={`${activeSideInfo.label} primary VP`}>
-                    {activeTotals.primary} / {MISSION_VP_CAP}
-                  </output>
-                </td>
-              </tr>
-            </tfoot>
           </table>
         </section>
 
@@ -161,21 +180,32 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
 
           <div className="mbp-secondary-summary" aria-live="polite" aria-atomic="true">
             <span>
-              <strong>{activeTotals.included}</strong> / {SECONDARY_MISSIONS.length} included
-              <span className="mbp-secondary-summary__muted">
-                {' '}- {activeTotals.excluded} excluded - {activeTotals.unassessed} undecided
-              </span>
+              <strong>{activeTotals.included}</strong> / {SECONDARY_MISSIONS.length} selected
             </span>
             <span className="mbp-secondary-summary__scores">
-              Selected pool <strong>{activeTotals.secondaryRaw}/{MISSION_VP_CAP} VP</strong>
+              <strong>{activeTotals.secondaryRaw}/{MISSION_VP_CAP} VP</strong>
             </span>
           </div>
 
           <ul className="mbp-secondary-list" aria-label={`${activeSideInfo.label} secondary missions`}>
             {SECONDARY_MISSIONS.map((mission) => {
               const entry = plan.secondary[activeSide][mission.id]
+              const included = entry.status === 'included'
               return (
-                <li key={mission.id} className={`mbp-secondary-card is-${entry.status}`}>
+                <li key={mission.id} className={`mbp-secondary-card is-${included ? 'included' : 'unassessed'}`}>
+                  <label className="mbp-secondary-checkbox">
+                    <input
+                      type="checkbox"
+                      aria-label={`Include ${mission.name}`}
+                      checked={included}
+                      onChange={(event) => setSecondary(mission.id, {
+                        status: event.target.checked ? 'included' : 'unassessed',
+                      })}
+                    />
+                    <span className="mbp-secondary-checkbox__indicator" aria-hidden="true">
+                      <Check size={12} strokeWidth={2.5} />
+                    </span>
+                  </label>
                   <button
                     type="button"
                     className="mbp-secondary-card__name"
@@ -183,35 +213,8 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
                     aria-label={`View ${mission.name} card`}
                   >
                     <span>{mission.name}</span>
-                    <BookOpen size={14} aria-hidden="true" />
                   </button>
                   <div className="mbp-secondary-card__controls">
-                    <div className="mbp-secondary-verdict" role="group" aria-label={`${mission.name} planning status`}>
-                      <button
-                        type="button"
-                        className="mbp-chip mbp-secondary-include"
-                        aria-label={`Include ${mission.name}`}
-                        aria-pressed={entry.status === 'included'}
-                        title="Include in plan. Click again to clear."
-                        onClick={() => setSecondary(mission.id, {
-                          status: entry.status === 'included' ? 'unassessed' : 'included',
-                        })}
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="mbp-chip mbp-secondary-exclude"
-                        aria-label={`Exclude ${mission.name}`}
-                        aria-pressed={entry.status === 'excluded'}
-                        title="Exclude from plan. Click again to clear."
-                        onClick={() => setSecondary(mission.id, {
-                          status: entry.status === 'excluded' ? 'unassessed' : 'excluded',
-                        })}
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
                     <label className="mbp-secondary-target">
                       <input
                         type="number"
@@ -222,7 +225,6 @@ export function MissionWorkspace({ battleplan, activeSide, onSideChange }) {
                         placeholder="-"
                         aria-label={`${activeSideInfo.label} VP for ${mission.name}`}
                         value={entry.target}
-                        disabled={entry.status === 'excluded'}
                         onChange={(event) => setSecondary(mission.id, { target: event.target.value })}
                       />
                       <span>VP</span>

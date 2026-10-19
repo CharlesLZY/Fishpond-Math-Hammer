@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MacroBattleplan11e from '../MacroBattleplan11e'
+import { getDisposition } from '../config/battleplans11e'
 import { createMissionPlan, MISSION_ROUNDS } from '../config/missionPlanning11e'
 
 const { stateRef, selects } = vi.hoisted(() => ({
@@ -83,6 +84,38 @@ describe('Tactical board view separation', () => {
     expect(html).toContain('aria-pressed="false">Missions &amp; VP</button>')
   })
 
+  it('places shared battleplan selectors above the tabs and keeps Layout in Battlefield', () => {
+    const html = renderToStaticMarkup(<MacroBattleplan11e />)
+    const setupIndex = html.indexOf('aria-label="Battleplan setup"')
+    const tabsIndex = html.indexOf('aria-label="Tactical board views"')
+    const battlefield = html.split('class="mbp-body"')[1]
+    const setup = html.match(/<section[^>]*aria-label="Battleplan setup"[^>]*>([\s\S]*?)<\/section>/)[1]
+    expect(setupIndex).toBeGreaterThan(-1)
+    expect(setupIndex).toBeLessThan(tabsIndex)
+    expect(html.match(/aria-label="Attacker"/g)).toHaveLength(1)
+    expect(html.match(/aria-label="Defender"/g)).toHaveLength(1)
+    expect(battlefield).not.toContain('aria-label="Attacker"')
+    expect(battlefield).not.toContain('aria-label="Defender"')
+    expect(battlefield).toContain('aria-label="Battlefield layout"')
+    expect(setup).not.toContain('Layout A')
+    for (const layout of ['A', 'B', 'C']) {
+      expect(battlefield).toContain(`>Layout ${layout}</button>`)
+    }
+  })
+
+  it('retains both selected disposition colors and the shared option renderer', () => {
+    renderToStaticMarkup(<MacroBattleplan11e />)
+    expect(selects.size).toBe(2)
+    for (const [label, key] of [['Attacker', 'mine'], ['Defender', 'theirs']]) {
+      const props = selects.get(label)
+      const expected = getDisposition(stateRef.current.setup[key])
+      expect(props.value.value).toBe(expected.id)
+      expect(props.value.color).toBe(expected.color)
+      const option = props.formatOptionLabel(props.value)
+      expect(option.props.children[0].props.style.backgroundColor).toBe(expected.color)
+    }
+  })
+
   it('does not prompt to clear primary scores when all three stages are blank', () => {
     const confirm = vi.fn()
     vi.stubGlobal('window', { confirm })
@@ -94,17 +127,20 @@ describe('Tactical board view separation', () => {
     expect(stateRef.current.setSetup).toHaveBeenCalledWith({ mine: 'purge-the-foe' })
   })
 
-  it.each([false, true])('respects confirmation (%s) when only end-game scores exist', (accepted) => {
-    const confirm = vi.fn(() => accepted)
+  it.each([
+    ['Attacker', 'mine'],
+    ['Defender', 'theirs'],
+  ])('updates %s immediately without confirmation when primary scores exist', (label, key) => {
+    const confirm = vi.fn(() => false)
     vi.stubGlobal('window', { confirm })
     const plan = createMissionPlan()
     plan.primary.player[5].endGame = 3
     plan.primary.opponent[5].endGame = 5
     stateRef.current.missionPlan = plan
     renderToStaticMarkup(<MacroBattleplan11e />)
-    selects.get('Attacker').onChange({ value: 'purge-the-foe' })
+    selects.get(label).onChange({ value: 'purge-the-foe' })
 
-    expect(confirm).toHaveBeenCalledOnce()
-    expect(stateRef.current.setSetup).toHaveBeenCalledTimes(accepted ? 1 : 0)
+    expect(confirm).not.toHaveBeenCalled()
+    expect(stateRef.current.setSetup).toHaveBeenCalledExactlyOnceWith({ [key]: 'purge-the-foe' })
   })
 })

@@ -1,3 +1,21 @@
+.mbp-battleplan-setup {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px 16px;
+  background: #2a2a2a;
+}
+
+.mbp-battleplan-setup .mbp11-setup {
+  gap: 8px 16px;
+}
+
+.mbp-battleplan-setup .mbp11-field {
+  flex-basis: 240px;
+  max-width: none;
+}
+
 .mbp-workspace-tabs {
   flex-shrink: 0;
 }
@@ -43,6 +61,15 @@
 }
 
 .mbp-plan-overview {
+  min-width: 0;
+  border-left: 3px solid var(--mbp-side-color);
+}
+
+.mbp-mission-side-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -117,12 +144,44 @@
   font: inherit;
 }
 
-.mbp-primary-cards-button {
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+.mbp-primary-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mbp-primary-heading {
+  flex-wrap: nowrap;
+}
+
+.mbp-primary-heading .mbp-primary-mission-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.mbp-secondary-card__name {
+  color: #d0d0d0;
+}
+
+.mbp-primary-mission-name {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
   padding: 0;
-  border-radius: 4px;
+  border: 0;
+  background: transparent;
+  color: #fbbf24;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: normal;
+  line-height: 1.4;
+  text-align: left;
+  text-transform: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
 }
 
 .mbp-primary-table {
@@ -138,9 +197,7 @@
 }
 
 .mbp-primary-table tbody th,
-.mbp-primary-table tbody td,
-.mbp-primary-table tfoot th,
-.mbp-primary-table tfoot td {
+.mbp-primary-table tbody td {
   padding: 6px 3px;
   border-top: 1px solid #444;
 }
@@ -176,14 +233,18 @@
   -webkit-appearance: none;
 }
 
-.mbp-primary-table tfoot th {
-  text-align: left;
-}
-
-.mbp-primary-table output {
+.mbp-primary-total {
+  margin-left: auto;
   color: #fbbf24;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
   white-space: nowrap;
+}
+
+.mbp-primary-total,
+.mbp-secondary-summary__scores strong {
+  font-size: 10px;
 }
 
 .mbp-plan-side-switch,
@@ -200,10 +261,6 @@
 .mbp-secondary-summary strong {
   color: #fbbf24;
   font-variant-numeric: tabular-nums;
-}
-
-.mbp-secondary-summary__muted {
-  color: #999;
 }
 
 .mbp-secondary-summary__scores {
@@ -235,12 +292,62 @@
 }
 
 .mbp-secondary-card.is-included {
-  border-color: #777;
-  background: #333;
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
 }
 
-.mbp-secondary-card.is-excluded {
-  border-color: #444;
+.mbp-secondary-checkbox {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  cursor: pointer;
+}
+
+.mbp-secondary-checkbox input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mbp-secondary-checkbox__indicator {
+  display: inline-flex;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #777;
+  border-radius: 4px;
+  background: #222;
+  color: #999;
+  pointer-events: none;
+}
+
+.mbp-secondary-checkbox__indicator svg {
+  opacity: 0;
+}
+
+.mbp-secondary-checkbox input:checked + .mbp-secondary-checkbox__indicator {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+
+.mbp-secondary-checkbox input:checked + .mbp-secondary-checkbox__indicator svg {
+  opacity: 1;
+}
+
+.mbp-secondary-checkbox input:focus-visible + .mbp-secondary-checkbox__indicator {
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.45);
 }
 
 .mbp-secondary-card__name {
@@ -253,7 +360,6 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #d0d0d0;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
@@ -265,17 +371,7 @@
   overflow-wrap: anywhere;
 }
 
-.mbp-secondary-card__name svg {
-  flex-shrink: 0;
-  color: #999;
-}
-
-.mbp-secondary-card.is-excluded .mbp-secondary-card__name {
-  color: #999;
-}
-
 .mbp-secondary-card__controls,
-.mbp-secondary-verdict,
 .mbp-secondary-target {
   display: flex;
   align-items: center;
@@ -287,23 +383,8 @@
   gap: 8px;
 }
 
-.mbp-secondary-verdict button {
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-}
-
-.mbp-secondary-include[aria-pressed='true'] {
-  border-color: #fbbf24;
-  background: rgba(251, 191, 36, 0.08);
+.mbp-secondary-card.is-included .mbp-secondary-card__name {
   color: #fbbf24;
-}
-
-.mbp-secondary-exclude[aria-pressed='true'] {
-  border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-  color: #fecaca;
 }
 
 .mbp-secondary-target {
@@ -315,12 +396,9 @@
   width: 44px;
 }
 
-.mbp-secondary-target input:disabled {
-  opacity: 0.45;
-}
-
 .mbp-missions input:focus-visible,
-.mbp-missions button:focus-visible {
+.mbp-missions button:focus-visible,
+.mbp11-card-dialog button:focus-visible {
   outline: 2px solid #fbbf24;
   outline-offset: 2px;
 }
@@ -349,15 +427,21 @@
     margin: 0;
   }
 
+  @media (max-width: 640px) {
+    .mbp-battleplan-setup {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   .mbp-missions {
     overflow: visible;
   }
 }
 
 @media (pointer: coarse) {
-  .mbp-secondary-verdict button {
-    width: 42px;
-    height: 42px;
+  .mbp-secondary-checkbox {
+    flex-basis: 42px;
+    min-height: 42px;
   }
 
   .mbp-primary-table input,
@@ -366,8 +450,7 @@
     height: 42px;
   }
 
-  .mbp-primary-cards-button {
-    width: 42px;
-    height: 42px;
+  .mbp-primary-mission-name {
+    min-height: 42px;
   }
 }

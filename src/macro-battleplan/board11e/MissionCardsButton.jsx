@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { BookOpen, Repeat2 } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Repeat2 } from 'lucide-react'
 import { getDisposition, getMissionCardImages } from '../config/battleplans11e'
 import { MissionCardDialog, MissionCardImage } from './MissionCardDialog'
 
@@ -49,49 +50,36 @@ function MissionCard({ player, disposition, mission }) {
   )
 }
 
-export function MissionCardsButton({ battleplan }) {
+export function MissionCardsButton({ mission, player }) {
   const [open, setOpen] = useState(false)
 
-  if (!battleplan) return null
+  if (!mission) return null
 
-  const mine = battleplan.mine
-  const theirs = battleplan.theirs
-  const mirror = mine.disposition === theirs.disposition && mine.mission === theirs.mission
-  const mineDisposition = getDisposition(mine.disposition)?.label
-  const theirDisposition = getDisposition(theirs.disposition)?.label
-  const dialogTitle = `${mineDisposition} vs ${theirDisposition} · Primary Missions`
+  const dialogTitle = `${player} · ${mission.mission}`
 
   return (
     <>
       <button
         type="button"
-        className="mbp-chip mbp-primary-cards-button"
+        className="mbp-primary-mission-name"
         onClick={() => setOpen(true)}
-        title="View primary cards"
-        aria-label="View primary cards"
+        aria-label={`View ${mission.mission} primary mission card`}
       >
-        <BookOpen size={16} />
+        {mission.mission}
       </button>
 
-      {open && (
+      {open && createPortal(
         <MissionCardDialog title={dialogTitle} onClose={() => setOpen(false)}>
-          <div className={`mbp11-missions-grid ${mirror ? 'is-mirror' : ''}`}>
+          <div className="mbp11-missions-grid is-mirror">
             <MissionCard
-              key={`${mine.disposition}-${mine.mission}`}
-              player={mirror ? 'Attacker / Defender' : 'Attacker'}
-              disposition={mine.disposition}
-              mission={mine.mission}
+              key={`${mission.disposition}-${mission.mission}`}
+              player={player}
+              disposition={mission.disposition}
+              mission={mission.mission}
             />
-            {!mirror && (
-              <MissionCard
-                key={`${theirs.disposition}-${theirs.mission}`}
-                player="Defender"
-                disposition={theirs.disposition}
-                mission={theirs.mission}
-              />
-            )}
           </div>
-        </MissionCardDialog>
+        </MissionCardDialog>,
+        document.body,
       )}
     </>
   )

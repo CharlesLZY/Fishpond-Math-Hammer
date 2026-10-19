@@ -30,6 +30,12 @@ their existing single-unit format and behavior.
 
 ## 40K Tactical Board
 
+The shared **Battleplan** header sits above both tabs and selects the
+Attacker's and Defender's Force Dispositions and their associated colors.
+The same selections apply in both views. **Layout A/B/C** remains in the
+Battlefield sidebar only, with its segmented control stretching to the
+panel's full available width.
+
 The board has two views. **Battlefield** contains the map and its tools only:
 there are no scores, VP summaries, or mission-card scoring overlays on the map.
 Switching views preserves bases, drawings, selections, and the map tools.
@@ -37,25 +43,39 @@ Map keyboard shortcuts are disabled while viewing **Missions & VP**.
 
 **Missions & VP** uses the same sections and segmented controls as Battlefield.
 A single **Attacker / Defender** switch above both mission sections controls
-the primary and secondary inputs together. There are no player-name labels,
-explanatory paragraphs, or primary mission-name labels:
+the primary and secondary inputs together. The overview cards and side switch
+repeat the selected Force Disposition colors. There are no player-name labels
+or explanatory paragraphs:
 
 - Primary scoring is a vertical R1-R5 table with three manual inputs per row
   and no visible stage captions. There is no 15 VP per-round limit; the
-  primary total is capped at **45 VP**. Primary card references
-  follow the Force Disposition matchup.
-  Changing a primary mission clears that side's primary targets after a
-  confirmation; changing only the layout preserves the plan.
-- All 18 Tactical secondary missions can be included, excluded, or left
-  undecided. Scores start blank and including a card does not fill in a score.
+  primary total is capped at **45 VP**. The current mission name and
+  **X/45 VP** total share one header row, with no extra Primary VP footer.
+  The **Primary missions** title stays above this row. The current primary
+  mission name is amber; unselected secondary mission names use neutral text.
+  Clicking the primary mission name opens its card, including the back where
+  available. Primary card references follow the Force Disposition matchup.
+  Changing the matchup applies immediately without confirmation and clears
+  targets for any primary missions that change. Secondary selections and
+  scores are preserved; changing only the layout preserves the entire plan.
+- All 18 Tactical secondary missions have one checkbox at the start of each row.
+  Scores start blank and selecting a card does not fill in a score.
   Enter each card's target directly as a whole number from 0 to
   5 VP, or clear it while planning; saved manual values are preserved and
   scores are not restricted to a dropdown
   of printed scoring tiers. Compact cards show the score followed by VP,
   without a Target prefix. Click a card's name to view the locally bundled
-  original PNG. There are no task notes or secondary round assignments.
-- The secondary summary shows **Selected pool X/45 VP**, with no separate
-  Planning cap line. X is the raw selected pool, so excess candidate points
+  original PNG. Mission names are the card-reference controls; there are no
+  separate book icons. There are no task notes or secondary round assignments.
+  Selecting a checkbox highlights the entire row in amber; unchecking it removes
+  the highlight without clearing the saved score. There are no separate include
+  or exclude buttons. Older excluded cards appear unchecked and their scores
+  remain editable. Dark rounded checkboxes use the board's amber accents and
+  shared check icon without hover effects. Native checkbox semantics and a
+  visible keyboard focus ring are retained.
+- The secondary summary shows only **X/45 VP**, using the same font size as
+  the primary VP counter, with no separate Planning cap line.
+  X is the raw selected pool, so excess candidate points
   remain visible while overview scores are capped at 45. This is a potential scoring
   budget, not a prediction: draw order, battlefield conditions, and the 15 VP
   secondary limit per battle round are not simulated. Fixed scoring and

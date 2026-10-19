@@ -1,87 +1,28 @@
 import { useRef } from 'react'
 import { Download, Move, RotateCcw, Upload } from 'lucide-react'
-import { FormSelect } from '../../components/ui'
 import { BasesSection, SelectionSection } from '../components/BaseControls'
 import { useBoard11eStore } from '../store/board11eStore'
-import { FORCE_DISPOSITIONS, LAYOUTS } from '../config/battleplans11e'
-import {
-  getChangedPrimarySides,
-  hasMissionPlan,
-  hasPrimaryTargets,
-} from '../config/missionPlanning11e'
+import { LAYOUTS } from '../config/battleplans11e'
+import { hasMissionPlan } from '../config/missionPlanning11e'
 
-const DISPOSITION_OPTIONS = FORCE_DISPOSITIONS.map((d) => ({
-  value: d.id,
-  label: d.label,
-  color: d.color,
-}))
-
-const formatDispositionOption = (option) => (
-  <span className="mbp11-option">
-    <span
-      className="mbp11-swatch"
-      style={{ backgroundColor: option.color }}
-      aria-hidden="true"
-    />
-    {option.label}
-  </span>
-)
-
-function DispositionSelect({ label, value, onChange }) {
-  return (
-    <div className="mbp11-field">
-      <span className="mbp11-field__label">{label}</span>
-      <FormSelect
-        className="mbp11-select"
-        options={DISPOSITION_OPTIONS}
-        value={DISPOSITION_OPTIONS.find((o) => o.value === value) ?? null}
-        onChange={(option) => onChange(option.value)}
-        formatOptionLabel={formatDispositionOption}
-        menuPortalTarget={document.body}
-        aria-label={label}
-      />
-    </div>
-  )
-}
-
-function BattleplanSection() {
+function LayoutSection() {
   const setup = useBoard11eStore((s) => s.setup)
   const setSetup = useBoard11eStore((s) => s.setSetup)
-  const missionPlan = useBoard11eStore((s) => s.missionPlan)
-
-  const changeDisposition = (patch) => {
-    const changedSides = getChangedPrimarySides(setup, { ...setup, ...patch })
-    const hasTargets = changedSides.some((side) => hasPrimaryTargets(missionPlan, side))
-    if (
-      hasTargets &&
-      !window.confirm('Changing the matchup clears primary targets for changed missions. Continue?')
-    ) return
-    setSetup(patch)
-  }
 
   return (
     <div className="mbp-section">
       <div className="mbp-section__header">
-        <span>battleplan</span>
+        <span>Layout</span>
       </div>
       <div className="mbp11-setup">
-        <DispositionSelect
-          label="Attacker"
-          value={setup.mine}
-          onChange={(mine) => changeDisposition({ mine })}
-        />
-        <DispositionSelect
-          label="Defender"
-          value={setup.theirs}
-          onChange={(theirs) => changeDisposition({ theirs })}
-        />
-        <div className="mbp-segmented mbp11-layouts">
+        <div className="mbp-segmented mbp11-layouts" role="group" aria-label="Battlefield layout">
           {LAYOUTS.map((id) => (
             <button
               key={id}
               type="button"
               onClick={() => setSetup({ layout: id })}
               className={`mbp-segmented__btn ${setup.layout === id ? 'is-active' : ''}`}
+              aria-pressed={setup.layout === id}
             >
               Layout {id}
             </button>
@@ -212,7 +153,7 @@ export function Board11eSidebar() {
   return (
     <aside className="mbp-tools">
       <div className="mbp-tools__scroll">
-        <BattleplanSection />
+        <LayoutSection />
         <BasesSection addBase={addBase} addOvalBase={addOvalBase} addRectBase={addRectBase} />
         <SelectionSection />
         <BoardSection />
