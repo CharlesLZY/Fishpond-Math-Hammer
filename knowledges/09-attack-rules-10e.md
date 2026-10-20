@@ -394,17 +394,20 @@ optionally re-rolls once, evaluates again. A re-rolled die cannot be
 re-rolled.
 
 The simulator also supports two independent unit-only buffs:
-`rerollOneFailedHit` and `rerollOneFailedWound`. Each grants one failed-roll
-reroll for the entire attacking unit, shared across all weapon profiles and
+`rerollFailedHit` and `rerollFailedWound`. Each grants up to X failed-roll
+rerolls (X = 1-3, 0 disables the buff) for the entire attacking unit, shared across all weapon profiles and
 firing models. Their budgets reset every Monte Carlo trial. They are not
-weapon-profile abilities and duplicate unit-buff layers do not add uses.
+weapon-profile abilities; duplicate unit-buff layers use the larger X rather
+than adding uses. Legacy one-failure buffs migrate to X = 1.
 
 For each original die, first use its existing reroll policy if eligible and
-available. Otherwise, a failed roll can use the matching unit opportunity.
+available, without spending X. Otherwise, a failed roll can spend one use of
+the matching unit budget. Full failed/non-critical policies already cover
+all failures and do not grant another reroll from the limited buff.
 Only then roll the replacement die once. Never feed that result through
 either rule again: a failed 2 rerolled into a 1 does not trigger reroll-ones,
-and a 1 rerolled into another failure cannot spend the unit opportunity.
-The shared opportunity goes to the first eligible failure in weapon order.
+and a 1 rerolled into another failure cannot spend a unit use.
+The shared uses go to the first eligible failures in weapon order.
 Torrent and Lethal Hits skip their respective rolls without spending a use.
 
 ---

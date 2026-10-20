@@ -51,13 +51,14 @@ Unit reroll layers keep the broader coverage (ones, ones/twos, full rerolls)
 so adding reroll ones does not replace saved reroll failures. Failed and
 non-critical rerolls remain alternative strategies: an explicit extra choice
 between them takes precedence. Clearing it restores the saved reroll.
-Two independent **unit-only** buffs reroll one failed hit and one failed
-wound. Each opportunity is shared across all weapons and firing models for
+Two independent **unit-only** buffs reroll up to X failed hit or wound
+dice (X = 1-3). Each budget is shared across all weapons and firing models for
 one unit attack, and resets for every simulation trial. Existing eligible
-rerolls take priority; the single reroll only applies to another failed die
-that has not already been rerolled. Neither a 2 rerolled into a 1 nor a 1
+rerolls take priority without spending X; limited rerolls only apply to failed dice
+that have not already been rerolled. Neither a 2 rerolled into a 1 nor a 1
 rerolled into a failure can be rerolled again. Duplicate saved/additional
-copies of either buff still grant only one opportunity.
+copies of either buff use the larger X, not their sum. Existing single-failure
+buffs load as X = 1.
 Other duplicate bonuses do not stack: sustained hits, critical thresholds,
 and defensive reductions use the existing best-effect rules. The preview
 and simulation use the same merged configuration without modifying either
@@ -79,13 +80,14 @@ lethal hits, devastating wounds, anti-X, rerolls, crit threshold), it produces:
 - Expected hits / crits / wounds / mortal wounds
 - An exact integer wound-count distribution chart
 
-The Hit and Wound buff groups also offer `REROLL ONE HIT` and
-`REROLL ONE WOUND`. Each grants one failed-roll reroll across the whole
+The Hit and Wound buff groups also offer `REROLL FAILED HIT DICE X` and
+`REROLL FAILED WOUND DICE X`, with inline X values from 1 to 3. Each grants
+up to X failed-roll rerolls across the whole
 attack pool, not one per die. They stack with the existing reroll selectors,
 but no die can be rerolled twice. One exact finite-budget calculation supplies
 all statistics and the wound distribution for every configuration, including
 Lethal Hits, fixed/random Sustained Hits, Devastating Wounds, and ANTI.
-Torrent hides the hit-only buff and does not spend its opportunity.
+Torrent hides the hit-only buff and does not spend its budget.
 The same probability model is used with the buffs on or off, so redundant
 reroll sources do not alter the results. Variances and distributions include
 randomness in both the original hits and any generated extras.

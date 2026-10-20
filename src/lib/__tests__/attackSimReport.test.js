@@ -135,11 +135,11 @@ describe('buildMultiUnitAttackSimReport', () => {
     expect(report).toContain('### Unit 3\n')
     expect(first).toContain('- Alpha:')
     expect(first).toContain('#### unitBuffsSection')
-    expect(first).toContain('- rerollOneFailedHit')
-    expect(first).not.toContain('rerollOneFailedWound')
+    expect(first).toContain('- rerollFailedHit 1')
+    expect(first).not.toContain('rerollFailedWound')
     expect(second).toContain('- Beta:')
-    expect(second).toContain('- rerollOneFailedWound')
-    expect(second).not.toContain('rerollOneFailedHit')
+    expect(second).toContain('- rerollFailedWound 1')
+    expect(second).not.toContain('rerollFailedHit')
     expect(third).toContain('- Gamma:')
     expect(third).not.toContain('unitBuffsSection')
     expect(report.match(/^## reportDefender$/gm)).toHaveLength(1)
@@ -350,8 +350,8 @@ describe('buildAttackSimReport', () => {
       unitBuffs: attackerUnitBuffs({
         hitReroll: 'reroll-fail',
         woundReroll: 'reroll-non-critical',
-        rerollOneFailedHit: true,
-        rerollOneFailedWound: true,
+        rerollFailedHit: 2,
+        rerollFailedWound: 3,
         plusOneAttack: true,
         plusOneDamage: true,
         plusOneAp: true,
@@ -367,8 +367,8 @@ describe('buildAttackSimReport', () => {
     })
 
     const expected = [
-      '- rerollOneFailedHit',
-      '- rerollOneFailedWound',
+      '- rerollFailedHit 2',
+      '- rerollFailedWound 3',
       '- hitReroll: rerollFails',
       '- woundReroll: rerollNonCritical',
       '- plusOneAttack',
@@ -385,14 +385,16 @@ describe('buildAttackSimReport', () => {
     expected.forEach((entry) => expect(report).toContain(entry))
   })
 
-  it.each(['rerollOneFailedHit', 'rerollOneFailedWound'])(
+  it.each(['rerollFailedHit', 'rerollFailedWound'])(
     'reports a standalone %s only in the unit-buff section',
     (flag) => {
-      const report = build({ unitBuffs: attackerUnitBuffs({ [flag]: true }) })
-      const [profiles, buffs] = report.split('### unitBuffsSection')
+      for (const count of [1, 2, 3]) {
+        const report = build({ unitBuffs: attackerUnitBuffs({ [flag]: count }) })
+        const [profiles, buffs] = report.split('### unitBuffsSection')
 
-      expect(profiles).not.toContain(flag)
-      expect(buffs).toContain(`- ${flag}`)
+        expect(profiles).not.toContain(flag)
+        expect(buffs).toContain(`- ${flag} ${count}`)
+      }
     }
   )
 })

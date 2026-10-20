@@ -1,17 +1,18 @@
 // Unit-wide buff panel for the attacking unit.
 //
-// Most grants merge into each weapon profile. Single failed-roll rerolls
+// Most grants merge into each weapon profile. Limited failed-roll rerolls
 // stay at unit scope and share their budgets across every weapon.
 
 import { FormSelect, BuffChipGroup } from '../ui'
 import {
   rerollOptions,
   woundRerollOptions,
+  failedRerollOptions,
   critOptions,
   sustainedOptions,
 } from '../../lib/dice/options'
 import { useT } from '../attackSim/lang'
-import { isUnitBuffsEmpty } from '../../lib/dice'
+import { isUnitBuffsEmpty, makeUnitBuffs } from '../../lib/dice'
 
 const rerollLangKeys = {
   'no-reroll': 'noReroll',
@@ -21,8 +22,9 @@ const rerollLangKeys = {
   'reroll-non-critical': 'rerollNonCritical',
 }
 
-function UnitBuffsPanel({ value, onChange, disabled = false, additional = false }) {
+function UnitBuffsPanel({ value: rawValue, onChange, disabled = false, additional = false }) {
   const { t } = useT()
+  const value = makeUnitBuffs(rawValue)
   const update = (patch) => onChange({ ...value, ...patch })
   const rerollClassName = (key) => [
     'reroll-cell',
@@ -40,16 +42,22 @@ function UnitBuffsPanel({ value, onChange, disabled = false, additional = false 
 
   const buffs = [
     {
-      key: 'rerollOneFailedHit',
-      label: t('rerollOneFailedHit'),
-      active: value.rerollOneFailedHit,
-      onToggle: () => update({ rerollOneFailedHit: !value.rerollOneFailedHit }),
+      key: 'rerollFailedHit',
+      label: t('rerollFailedHit'),
+      active: value.rerollFailedHit > 0,
+      onToggle: () => update({ rerollFailedHit: value.rerollFailedHit ? 0 : 1 }),
+      value: (value.rerollFailedHit || 1).toString(),
+      valueOptions: failedRerollOptions,
+      onValueChange: (v) => update({ rerollFailedHit: Number(v) }),
     },
     {
-      key: 'rerollOneFailedWound',
-      label: t('rerollOneFailedWound'),
-      active: value.rerollOneFailedWound,
-      onToggle: () => update({ rerollOneFailedWound: !value.rerollOneFailedWound }),
+      key: 'rerollFailedWound',
+      label: t('rerollFailedWound'),
+      active: value.rerollFailedWound > 0,
+      onToggle: () => update({ rerollFailedWound: value.rerollFailedWound ? 0 : 1 }),
+      value: (value.rerollFailedWound || 1).toString(),
+      valueOptions: failedRerollOptions,
+      onValueChange: (v) => update({ rerollFailedWound: Number(v) }),
     },
     {
       key: 'plusOneAttack',

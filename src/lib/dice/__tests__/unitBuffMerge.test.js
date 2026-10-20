@@ -39,6 +39,36 @@ const weapon = (overrides = {}) => ({
   ...overrides,
 })
 
+describe('limited failed reroll counts', () => {
+  it.each([0, 1, 2, 3])('preserves X = %i and treats zero as disabled', (count) => {
+    const buffs = makeUnitBuffs({ rerollFailedHit: count, rerollFailedWound: count })
+
+    expect(buffs).toMatchObject({ rerollFailedHit: count, rerollFailedWound: count })
+    expect(isUnitBuffsEmpty(buffs)).toBe(count === 0)
+    expect(mergeWeaponWithUnit(weapon(), buffs)).not.toHaveProperty('rerollFailedHit')
+    expect(mergeWeaponWithUnit(weapon(), buffs)).not.toHaveProperty('rerollFailedWound')
+    expect(describeUpgrades(weapon(), buffs)).toEqual({})
+  })
+
+  it('migrates old flags without retaining them or overriding explicit new counts', () => {
+    const legacy = Object.freeze({ rerollOneFailedHit: true, rerollOneFailedWound: true })
+    const buffs = makeUnitBuffs(legacy)
+
+    expect(buffs).toMatchObject({ rerollFailedHit: 1, rerollFailedWound: 1 })
+    expect(buffs).not.toHaveProperty('rerollOneFailedHit')
+    expect(buffs).not.toHaveProperty('rerollOneFailedWound')
+    expect(makeUnitBuffs({ ...legacy, rerollFailedHit: 0, rerollFailedWound: 3 }))
+      .toMatchObject({ rerollFailedHit: 0, rerollFailedWound: 3 })
+    expect(legacy.rerollOneFailedHit).toBe(true)
+  })
+
+  it.each([-1, 4, 1.5, '2', true, Infinity, NaN])('rejects invalid X = %s', (count) => {
+    for (const key of ['rerollFailedHit', 'rerollFailedWound']) {
+      expect(() => makeUnitBuffs({ [key]: count })).toThrow('integer between 0 and 3')
+    }
+  })
+})
+
 describe('isUnitBuffsEmpty', () => {
   it('treats null/undefined as empty', () => {
     expect(isUnitBuffsEmpty(null)).toBe(true)

@@ -13,6 +13,7 @@ export {
 export { binomialProbability, buildDistribution } from './binomial'
 export { buildWoundDistribution } from './woundDistribution'
 export { calculateWoundPool } from './woundPool'
+export { normalizeFailedRerollCount } from './d6Rerolls'
 export { calculateChargeProbabilities } from './chargeProbability'
 
 export { simulateKillProbability } from './simulation'

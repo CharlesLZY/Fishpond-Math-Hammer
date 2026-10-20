@@ -134,8 +134,8 @@ describe('Attack Simulator profile-library transfer', () => {
     const unitBuffs = Object.freeze({
       hitReroll: 'reroll-one',
       woundReroll: 'reroll-one',
-      rerollOneFailedHit: true,
-      rerollOneFailedWound: true,
+      rerollFailedHit: 2,
+      rerollFailedWound: 3,
     })
     const library = parseAttackerProfileLibrary(buildAttackerProfileLibraryExport({
       Squad: { weapons: [weapon], unitBuffs },
@@ -145,12 +145,43 @@ describe('Attack Simulator profile-library transfer', () => {
 
     expect(hydrated.unitBuffs).toMatchObject(unitBuffs)
     expect(serialized.unitBuffs).toMatchObject(unitBuffs)
-    expect(serialized.weapons[0]).not.toHaveProperty('rerollOneFailedHit')
-    expect(serialized.weapons[0]).not.toHaveProperty('rerollOneFailedWound')
+    expect(serialized.weapons[0]).not.toHaveProperty('rerollFailedHit')
+    expect(serialized.weapons[0]).not.toHaveProperty('rerollFailedWound')
     expect(hydrateAttackerProfile({ weapons: [weapon] }).unitBuffs).toMatchObject({
-      rerollOneFailedHit: false,
-      rerollOneFailedWound: false,
+      rerollFailedHit: 0,
+      rerollFailedWound: 0,
     })
+  })
+
+  it('loads old single-reroll buffs as X = 1 and saves only canonical counts', () => {
+    const legacy = Object.freeze({ rerollOneFailedHit: true, rerollOneFailedWound: true })
+    const profile = hydrateAttackerProfile({ weapons: [weapon], unitBuffs: legacy })
+    const serialized = serializeAttackerProfile(profile)
+
+    expect(serialized.unitBuffs).toMatchObject({ rerollFailedHit: 1, rerollFailedWound: 1 })
+    expect(serialized.unitBuffs).not.toHaveProperty('rerollOneFailedHit')
+    expect(serialized.unitBuffs).not.toHaveProperty('rerollOneFailedWound')
+    expect(legacy.rerollOneFailedHit).toBe(true)
+  })
+
+  it.each([0, 1, 2, 3])('round-trips both shared reroll counts at X = %i', (count) => {
+    const unitBuffs = { rerollFailedHit: count, rerollFailedWound: count }
+    const serialized = serializeAttackerProfile(hydrateAttackerProfile({
+      weapons: [weapon], unitBuffs,
+    }))
+    const imported = parseAttackerProfileLibrary(buildAttackerProfileLibraryExport({
+      Squad: serialized,
+    }))
+
+    expect(hydrateAttackerProfile(imported.Squad).unitBuffs).toMatchObject(unitBuffs)
+  })
+
+  it.each([-1, 4, 1.5, '2', true])('rejects invalid imported reroll count %s', (count) => {
+    for (const key of ['rerollFailedHit', 'rerollFailedWound']) {
+      expect(() => parseAttackerProfileLibrary(buildAttackerProfileLibraryExport({
+        Squad: { weapons: [weapon], unitBuffs: { [key]: count } },
+      }))).toThrow(`profiles["Squad"].unitBuffs.${key}`)
+    }
   })
 
   it('builds and parses an attacker profile library', () => {

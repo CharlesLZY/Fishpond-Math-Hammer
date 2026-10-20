@@ -35,8 +35,8 @@ const chipOrigins = (html, label) =>
 
 describe('comparison Profile names', () => {
   it.each([
-    ['rerollOneFailedHit', 'HitRR1'],
-    ['rerollOneFailedWound', 'WoundRR1'],
+    ['rerollFailedHit', 'HitFailRR 1', 1],
+    ['rerollFailedWound', 'WoundFailRR 1', 1],
     ['plusOneAttack', '+1A'],
     ['plusOneDamage', '+1D'],
     ['plusOneAp', '+1AP'],
@@ -45,8 +45,8 @@ describe('comparison Profile names', () => {
     ['lethalHits', 'LethalHits'],
     ['devastatingWounds', 'DevWounds'],
     ['ignoresCover', 'IgnoresCover'],
-  ])('includes the enabled %s addition in the name', (key, suffix) => {
-    expect(buildComparisonProfileName('Squad', makeUnitBuffs({ [key]: true })))
+  ])('includes the enabled %s addition in the name', (key, suffix, value = true) => {
+    expect(buildComparisonProfileName('Squad', makeUnitBuffs({ [key]: value })))
       .toBe(`Squad ${suffix}`)
   })
 
@@ -54,8 +54,8 @@ describe('comparison Profile names', () => {
     const extra = Object.freeze(makeUnitBuffs({
       hitReroll: 'reroll-fail',
       woundReroll: 'reroll-one-two',
-      rerollOneFailedHit: true,
-      rerollOneFailedWound: true,
+      rerollFailedHit: 2,
+      rerollFailedWound: 3,
       plusOneAttack: true,
       plusOneDamage: true,
       plusOneAp: true,
@@ -70,7 +70,7 @@ describe('comparison Profile names', () => {
     }))
 
     expect(buildComparisonProfileName('Squad', extra)).toBe(
-      'Squad HitRR: Fails WoundRR: Ones and Twos HitRR1 WoundRR1 +1A +1D +1AP +1Hit +1Wound LethalHits DevWounds Sustained D3 CritHit 4+ IgnoresCover'
+      'Squad HitRR: Fails WoundRR: Ones and Twos HitFailRR 2 WoundFailRR 3 +1A +1D +1AP +1Hit +1Wound LethalHits DevWounds Sustained D3 CritHit 4+ IgnoresCover'
     )
   })
 
@@ -203,8 +203,8 @@ describe('comparison additional-buff editors and read-only origins', () => {
   })
 
   it.each([
-    ['en', 'REROLL ONE HIT', 'REROLL ONE WOUND'],
-    ['zh', '重投一颗命中', '重投一颗造伤'],
+    ['en', 'REROLL FAILED HIT DICE', 'REROLL FAILED WOUND DICE'],
+    ['zh', '重投失败命中骰', '重投失败造伤骰'],
   ])('offers shared failed rerolls only in the %s unit editor and unit summaries', (
     lang, hitLabel, woundLabel
   ) => {
@@ -212,32 +212,36 @@ describe('comparison additional-buff editors and read-only origins', () => {
     const unitBuffs = makeUnitBuffs({
       hitReroll: 'reroll-one',
       woundReroll: 'reroll-one',
-      rerollOneFailedHit: true,
-      rerollOneFailedWound: true,
+      rerollFailedHit: 2,
+      rerollFailedWound: 3,
     })
     const active = render(<UnitBuffsPanel value={unitBuffs} additional onChange={vi.fn()} />)
     const empty = render(<UnitBuffsPanel value={makeUnitBuffs()} onChange={vi.fn()} />)
     const disabled = render(<UnitBuffsPanel value={unitBuffs} disabled onChange={vi.fn()} />)
     const weapon = render(<WeaponBuffsEditor profile={makeWeapon()} onChange={vi.fn()} />)
 
-    for (const label of [hitLabel, woundLabel]) {
+    for (const [label, count] of [[hitLabel, 2], [woundLabel, 3]]) {
       expect(buttonAttributes(active, label)).toContain('aria-pressed="true"')
       expect(buttonAttributes(active, label)).not.toContain('disabled=""')
+      expect(inputMarkup(active, `${label} value`)).toContain(`value="${count}"`)
+      expect(inputMarkup(active, `${label} value`)).toContain('title="1, 2, 3"')
       expect(buttonAttributes(empty, label)).toContain('aria-pressed="false"')
+      expect(inputMarkup(empty, `${label} value`)).toBeUndefined()
       expect(buttonAttributes(disabled, label)).toContain('disabled=""')
+      expect(inputMarkup(disabled, `${label} value`)).toContain('disabled=""')
       expect(weapon).not.toContain(label)
     }
-    expect(active).toContain('buff-chip active comparison-buff--added')
+    expect(active).toContain('buff-chip active with-value comparison-buff--added')
     expect(active).not.toContain('unit-buffs-hint')
     expect(buildAttackerUnitBuffSummary(unitBuffs, (key) => key).map(({ key }) => key))
-      .toContain('rerollOneFailedHit')
+      .toContain('rerollFailedHit')
     expect(buildWeaponSummary(makeWeapon(), null, (key) => key)).toEqual([])
 
     const saved = {
       weapons: [makeWeapon(), makeWeapon()],
-      unitBuffs: makeUnitBuffs({ rerollOneFailedHit: true }),
+      unitBuffs: makeUnitBuffs({ rerollFailedHit: 2 }),
     }
-    const extra = makeUnitBuffs({ rerollOneFailedWound: true })
+    const extra = makeUnitBuffs({ rerollFailedWound: 3 })
     const preview = render(
       <AttackerProfilePreview
         name="Squad"
@@ -246,8 +250,8 @@ describe('comparison additional-buff editors and read-only origins', () => {
         extraUnitBuffs={extra}
       />
     )
-    expect(chipOrigins(preview, hitLabel)).toEqual(['saved'])
-    expect(chipOrigins(preview, woundLabel)).toEqual(['added'])
+    expect(chipOrigins(preview, `${hitLabel} 2`)).toEqual(['saved'])
+    expect(chipOrigins(preview, `${woundLabel} 3`)).toEqual(['added'])
   })
 
   it.each([

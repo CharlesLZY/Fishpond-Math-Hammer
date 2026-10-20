@@ -17,10 +17,11 @@
 // the rest of the kit. So the merge does NOT promote rerolls automatically:
 // a weapon's intrinsic reroll always wins over a unit-wide reroll. The
 // unit reroll is adopted only when the weapon has none.
-// Single failed-hit/wound rerolls stay on the unit; their budgets are
+// Limited failed-hit/wound rerolls stay on the unit; their budgets are
 // shared across all weapons by the simulator, not copied into each profile.
 
 import { parseDiceExpression } from './diceExpression'
+import { normalizeFailedRerollCount } from './d6Rerolls'
 
 // Rank for SUSTAINED HITS values. Use the expected number of extra hits so
 // "D6" (mean 3.5) wins over "3" but loses to "4".
@@ -53,11 +54,17 @@ const addOneToDiceExpression = (expression) => {
   return `${dice}${modifier > 0 ? '+' : ''}${modifier}`
 }
 
-export const makeUnitBuffs = (overrides = {}) => ({
+export const makeUnitBuffs = ({
+  rerollFailedHit,
+  rerollFailedWound,
+  rerollOneFailedHit,
+  rerollOneFailedWound,
+  ...overrides
+} = {}) => ({
   hitReroll: 'no-reroll',
   woundReroll: 'no-reroll',
-  rerollOneFailedHit: false,
-  rerollOneFailedWound: false,
+  rerollFailedHit: normalizeFailedRerollCount(rerollFailedHit, rerollOneFailedHit, 'Failed hit reroll count'),
+  rerollFailedWound: normalizeFailedRerollCount(rerollFailedWound, rerollOneFailedWound, 'Failed wound reroll count'),
   plusOneAttack: false,
   plusOneDamage: false,
   plusOneAp: false,
@@ -77,8 +84,8 @@ export const isUnitBuffsEmpty = (u) => {
   return (
     (u.hitReroll || 'no-reroll') === 'no-reroll' &&
     (u.woundReroll || 'no-reroll') === 'no-reroll' &&
-    !u.rerollOneFailedHit &&
-    !u.rerollOneFailedWound &&
+    !normalizeFailedRerollCount(u.rerollFailedHit, u.rerollOneFailedHit) &&
+    !normalizeFailedRerollCount(u.rerollFailedWound, u.rerollOneFailedWound) &&
     !u.plusOneAttack &&
     !u.plusOneDamage &&
     !u.plusOneAp &&
@@ -130,6 +137,8 @@ export const mergeUnitBuffs = (saved, additional) => {
     if (typeof defaults[key] === 'boolean') {
       merged[key] = !!(base[key] || extra[key])
     }
+    merged.rerollFailedHit = Math.max(base.rerollFailedHit, extra.rerollFailedHit)
+    merged.rerollFailedWound = Math.max(base.rerollFailedWound, extra.rerollFailedWound)
   }
   merged.hitReroll = mergeUnitReroll(base.hitReroll, extra.hitReroll)
   merged.woundReroll = mergeUnitReroll(base.woundReroll, extra.woundReroll)

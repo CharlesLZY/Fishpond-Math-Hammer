@@ -23,7 +23,7 @@
 
 import { DEFAULT_SIMULATIONS, Z_95, REROLL_VALUES, REROLL_SCOPE, randomRerollThreshold } from './constants'
 import { parseDiceExpression, rollDiceExpr, rollDiceExprWithReroll } from './diceExpression'
-import { mergeWeaponWithUnit } from './unitBuffMerge'
+import { makeUnitBuffs, mergeWeaponWithUnit } from './unitBuffMerge'
 import { evaluateD6, shouldRerollD6 } from './d6Rerolls'
 import { normalizeAttackBonusValue } from './weaponProfile'
 
@@ -51,7 +51,7 @@ const rollD6WithReroll = (
   rerollMode,
   critThreshold = 6,
   budget = null,
-  singleFailedBudget = null
+  failedRerollBudget = null
 ) => {
   const doRoll = () => Math.floor(Math.random() * 6) + 1
 
@@ -63,12 +63,12 @@ const rollD6WithReroll = (
   const shouldReroll = shouldRerollD6(nat, rerollMode, success, isCrit)
 
   const policyReroll = shouldReroll && (!budget || budget.remaining > 0)
-  const singleFailedReroll =
-    !policyReroll && !success && singleFailedBudget?.remaining > 0
+  const limitedFailedReroll =
+    !policyReroll && !success && failedRerollBudget?.remaining > 0
 
   // Choose one source from the original roll; never reconsider its rerolled result.
-  if (policyReroll || singleFailedReroll) {
-    const usedBudget = policyReroll ? budget : singleFailedBudget
+  if (policyReroll || limitedFailedReroll) {
+    const usedBudget = policyReroll ? budget : failedRerollBudget
     if (usedBudget) usedBudget.remaining -= 1
     nat = doRoll()
     ;({ success, isCrit } = evaluate(nat))
@@ -366,10 +366,13 @@ export const simulateMultiUnitAttack = (
   targetProfiles,
   numSimulations = DEFAULT_SIMULATIONS
 ) => {
-  const effectiveUnits = attackerUnits.map(({ weapons, unitBuffs }) => ({
-    unitBuffs,
-    weapons: weapons.map((weapon) => mergeWeaponWithUnit(weapon, unitBuffs)),
-  }))
+  const effectiveUnits = attackerUnits.map(({ weapons, unitBuffs }) => {
+    const buffs = makeUnitBuffs(unitBuffs || {})
+    return {
+      unitBuffs: buffs,
+      weapons: weapons.map((weapon) => mergeWeaponWithUnit(weapon, buffs)),
+    }
+  })
   const totalModels = targetProfiles.reduce((s, p) => s + (p.models || 0), 0)
 
   const totalKillsPerTrial = []
@@ -383,8 +386,8 @@ export const simulateMultiUnitAttack = (
     for (const { weapons, unitBuffs } of effectiveUnits) {
       if (state.activeProfile >= state.profiles.length) break
       const unitRerollBudgets = {
-        hit: { remaining: unitBuffs?.rerollOneFailedHit ? 1 : 0 },
-        wound: { remaining: unitBuffs?.rerollOneFailedWound ? 1 : 0 },
+        hit: { remaining: unitBuffs.rerollFailedHit },
+        wound: { remaining: unitBuffs.rerollFailedWound },
       }
       const blastBaseModels = state.profiles.reduce(
         (sum, profile) => sum + profile.modelsRemaining, 0

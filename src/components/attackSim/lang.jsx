@@ -104,8 +104,8 @@ const translations = {
 
     // Unit buffs
     unitBuffsSection: 'Unit Buffs',
-    rerollOneFailedHit: 'REROLL ONE HIT',
-    rerollOneFailedWound: 'REROLL ONE WOUND',
+    rerollFailedHit: 'REROLL FAILED HIT DICE',
+    rerollFailedWound: 'REROLL FAILED WOUND DICE',
     noUnitBuffs: 'No unit buffs.',
     unitUpgradedTag: 'Upgraded by unit buff',
     unitGrantedTag: 'Granted by unit buff',
@@ -323,8 +323,8 @@ const translations = {
 
     // Unit buffs
     unitBuffsSection: '单位加成',
-    rerollOneFailedHit: '重投一颗命中',
-    rerollOneFailedWound: '重投一颗造伤',
+    rerollFailedHit: '重投失败命中骰',
+    rerollFailedWound: '重投失败造伤骰',
     noUnitBuffs: '当前没有启用任何单位加成。',
     unitUpgradedTag: '由单位加成强化',
     unitGrantedTag: '由单位加成提供',

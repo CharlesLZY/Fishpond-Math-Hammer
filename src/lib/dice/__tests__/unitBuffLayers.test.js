@@ -8,12 +8,12 @@ import {
 } from '../unitBuffMerge'
 
 describe('saved and additional unit buff layers', () => {
-  it.each(['rerollOneFailedHit', 'rerollOneFailedWound'])(
+  it.each(['rerollFailedHit', 'rerollFailedWound'])(
     'keeps %s alongside general rerolls without stacking duplicate copies',
     (flag) => {
-      const saved = Object.freeze(makeUnitBuffs({ [flag]: true }))
+      const saved = Object.freeze(makeUnitBuffs({ [flag]: 3 }))
       const extra = Object.freeze(makeUnitBuffs({
-        [flag]: true,
+        [flag]: 3,
         hitReroll: 'reroll-one',
         woundReroll: 'reroll-one',
       }))
@@ -27,6 +27,19 @@ describe('saved and additional unit buff layers', () => {
         hitReroll: 'no-reroll',
         woundReroll: 'no-reroll',
       }, merged)).not.toHaveProperty(flag)
+    }
+  )
+
+  it.each(['rerollFailedHit', 'rerollFailedWound'])(
+    'keeps the larger %s count without adding uses or weakening the saved layer',
+    (key) => {
+      const saved = Object.freeze(makeUnitBuffs({ [key]: 2 }))
+
+      expect(mergeUnitBuffs(saved, { [key]: 1 })[key]).toBe(2)
+      expect(mergeUnitBuffs(saved, { [key]: 2 })[key]).toBe(2)
+      expect(mergeUnitBuffs(saved, { [key]: 3 })[key]).toBe(3)
+      expect(mergeUnitBuffs(saved, { [key]: 0 })[key]).toBe(2)
+      expect(saved[key]).toBe(2)
     }
   )
 

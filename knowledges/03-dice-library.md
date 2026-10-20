@@ -57,21 +57,24 @@ crit threshold (default 6, can be 5 for "crits on 5+").
 Shared D6 evaluation and reroll-policy selection for the 40K simulator and
 exact wound-pool calculator. `getD6RollOutcomes` enumerates the original
 die and, if eligible, exactly one replacement. Existing rerolls take priority;
-the returned `usedSingle` flag only spends the separate failed-roll opportunity.
+the returned `usedFailedReroll` flag spends one use of the separate failed-roll budget.
 A replacement result is never fed back through either reroll rule.
+`normalizeFailedRerollCount` validates integer counts from 0 (disabled) to 3
+and migrates missing counts from the legacy single-failure flags.
 
 ### `woundPool.js`
 `calculateWoundPool(options)` computes exact statistics and the full integer
 wound distribution for 1-100 attacks. Options include the usual hit/wound
 thresholds, reroll modes, critical hits, Torrent, Sustained Hits, Lethal Hits,
-Devastating Wounds, ANTI, and `rerollOneFailedHit` / `rerollOneFailedWound`.
+Devastating Wounds, ANTI, and `rerollFailedHit` / `rerollFailedWound`
+(0 disables the buff; 1-3 specify its shared budget).
 
-Four budget states track the two shared single-roll opportunities. Probability
+Up to sixteen budget states track the two shared limited-reroll budgets. Probability
 mass and weighted first/second moments propagate through every attack and its
 generated hits, so limited rerolls are not treated as independent per-die buffs.
 The result contains numeric means, standard deviations, bounded 95% ranges,
 and `distributionData` in the shared chart shape. The Wound Success Calculator
-uses the same exact calculation with the single-reroll buffs on or off, so
+uses the same exact calculation with the limited-reroll buffs on or off, so
 redundant buff combinations leave all statistics and the distribution unchanged.
 
 ### `aos.js`
@@ -166,13 +169,18 @@ Weapons accept `attacks` and `damage` as **dice expressions** parsed by
 weapons-count multiplier — each weapon rolls its attack dice independently.
 
 Pass raw weapon profiles and the attacking unit's buffs separately. The engine
-merges per-weapon grants once before running trials. The unit-only flags
-`rerollOneFailedHit` and `rerollOneFailedWound` each grant one failed-roll
-reroll shared across every weapon and firing model in a trial, not one per
+merges per-weapon grants once before running trials. The unit-only counts
+`rerollFailedHit` and `rerollFailedWound` each grant up to X failed-roll
+rerolls (X = 1-3, or 0 to disable), shared across every weapon and firing model in a trial, not per
 weapon profile. Budgets reset each trial and remain independent of one another.
+`makeUnitBuffs` migrates legacy `rerollOneFailedHit` / `rerollOneFailedWound`
+booleans to counts of 1, unless an explicit new count overrides them.
+Saved/additional unit-buff layers use the larger count, not their sum.
 Existing eligible rerolls take priority without spending the shared budget.
 A rerolled die is never eligible for another reroll, regardless of its new face.
-The shared opportunity is used on the first otherwise-unrerollable failure
+Full failed/non-critical rerolls already cover every failure and gain no extra
+rerolls from X while their policy budget remains available.
+The shared budget is spent on the first otherwise-unrerollable failures
 in weapon display order; it is not reserved for a later, higher-damage weapon.
 
 Key rules implemented (see 08-glossary.md for vocabulary):

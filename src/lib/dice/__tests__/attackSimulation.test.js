@@ -324,6 +324,7 @@ describe.each([
   {
     stage: 'hit',
     flag: 'rerollOneFailedHit',
+    countKey: 'rerollFailedHit',
     policy: 'hitReroll',
     scope: 'hitRerollScope',
     weaponOverrides: { toHit: 4, critHitEnabled: true, critHit: 4, lethalHits: true },
@@ -331,12 +332,13 @@ describe.each([
   {
     stage: 'wound',
     flag: 'rerollOneFailedWound',
+    countKey: 'rerollFailedWound',
     policy: 'woundReroll',
     scope: 'woundRerollScope',
     weaponOverrides: { torrent: true },
   },
-])('simulateAttack — unit-wide single failed $stage rerolls', ({
-  flag, policy, scope, weaponOverrides,
+])('simulateAttack — unit-wide failed $stage rerolls', ({
+  flag, countKey, policy, scope, weaponOverrides,
 }) => {
   const weapon = (overrides = {}) =>
     baseWeapon({ attacks: '1', ...weaponOverrides, ...overrides })
@@ -346,6 +348,91 @@ describe.each([
     iterations = 1,
     targets = [baseTarget({ models: 100, save: 7 })]
   ) => simulateAttack(weapons, targets, iterations, buffs)
+
+  it.each([1, 2, 3])('shares exactly X = %i uses across firing models and weapons', (count) => {
+    const faces = Array.from({ length: count }, () => [2, 6]).flat()
+    const random = mockD6Faces(...faces, 2, 2)
+    const result = run(
+      [weapon({ modelsFiring: count + 1 }), weapon()],
+      { [countKey]: count }
+    )
+
+    expect(result.expectedDamage).toBe(count)
+    expect(random).toHaveBeenCalledTimes(2 * count + 2)
+  })
+
+  it.each([1, 2, 3])('does not reroll replacement failures even with X = %i and reroll ones', (count) => {
+    const faces = Array.from({ length: count }, () => [2, 1]).flat()
+    const random = mockD6Faces(...faces, 2)
+    const result = run(
+      [weapon({ attacks: (count + 1).toString() })],
+      { [countKey]: count, [policy]: 'reroll-one' }
+    )
+
+    expect(result.expectedDamage).toBe(0)
+    expect(random).toHaveBeenCalledTimes(2 * count + 1)
+  })
+
+  it.each(['unit', 'weapon'])('uses the %s reroll-ones policy before spending X = 3', (source) => {
+    const random = mockD6Faces(1, 1, 2, 6, 2, 1, 2, 6, 2)
+    const result = run(
+      [weapon({ attacks: '5', ...(source === 'weapon' ? { [policy]: 'reroll-one' } : {}) })],
+      { [countKey]: 3, ...(source === 'unit' ? { [policy]: 'reroll-one' } : {}) }
+    )
+
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(9)
+  })
+
+  it.each(['reroll-fail', 'reroll-non-critical'])(
+    'preserves all X = 3 uses for later weapons after %s',
+    (mode) => {
+      const random = mockD6Faces(2, 1, 3, 6, 2, 6, 2, 6, 2, 6, 2)
+      const result = run(
+        [weapon({ attacks: '2', [policy]: mode }), weapon({ attacks: '4' })],
+        { [countKey]: 3 }
+      )
+
+      expect(result.expectedDamage).toBe(4)
+      expect(random).toHaveBeenCalledTimes(11)
+    }
+  )
+
+  it.each(['reroll-fail', 'reroll-non-critical'])(
+    'uses X = 3 only on later original failures after a single-scoped %s is exhausted',
+    (mode) => {
+      const random = mockD6Faces(2, 1, 2, 6, 2, 6, 2, 6, 2)
+      const result = run(
+        [weapon({ attacks: '5', [policy]: mode, [scope]: 'single' })],
+        { [countKey]: 3 }
+      )
+
+      expect(result.expectedDamage).toBe(3)
+      expect(random).toHaveBeenCalledTimes(9)
+    }
+  )
+
+  it.each([1, 2, 3])('resets X = %i independently for each unit and trial', (count) => {
+    const unitFaces = [...Array.from({ length: count }, () => [2, 6]).flat(), 2]
+    const random = mockD6Faces(...Array.from({ length: 4 }, () => unitFaces).flat())
+    const unit = {
+      weapons: [weapon({ attacks: (count + 1).toString() })],
+      unitBuffs: { [countKey]: count },
+    }
+    const result = simulateMultiUnitAttack(
+      [unit, unit], [baseTarget({ models: 100, save: 7 })], 2
+    )
+
+    expect(result.expectedDamage).toBe(2 * count)
+    expect(random).toHaveBeenCalledTimes(4 * (2 * count + 1))
+  })
+
+  it('rejects an out-of-range budget before rolling dice', () => {
+    const random = mockD6Faces()
+
+    expect(() => run([weapon()], { [countKey]: 4 })).toThrow('integer between 0 and 3')
+    expect(random).not.toHaveBeenCalled()
+  })
 
   it('shares one opportunity across all weapon profiles', () => {
     const random = mockD6Faces(2, 6, 2)

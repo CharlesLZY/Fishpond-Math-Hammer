@@ -1,4 +1,4 @@
-import { normalizeAttackBonusValue } from '../../lib/dice'
+import { makeUnitBuffs, normalizeAttackBonusValue } from '../../lib/dice'
 
 const rerollShort = {
   'reroll-one': '1s',
@@ -11,8 +11,8 @@ const rerollShort = {
 const comparisonBuffLabels = {
   hitReroll: 'HitRR',
   woundReroll: 'WoundRR',
-  rerollOneFailedHit: 'HitRR1',
-  rerollOneFailedWound: 'WoundRR1',
+  rerollFailedHit: 'HitFailRR',
+  rerollFailedWound: 'WoundFailRR',
   plusOneAttack: '+1A',
   plusOneDamage: '+1D',
   plusOneAp: '+1AP',
@@ -149,7 +149,8 @@ export function buildTargetSummary(profile, upgrades, t) {
   return chips
 }
 
-export function buildAttackerUnitBuffSummary(unitBuffs, t) {
+export function buildAttackerUnitBuffSummary(value, t) {
+  const unitBuffs = makeUnitBuffs(value || {})
   const chips = []
   const add = (key, label) => chips.push({ key, label })
   pushReroll(
@@ -172,8 +173,10 @@ export function buildAttackerUnitBuffSummary(unitBuffs, t) {
     null,
     t
   )
-  if (unitBuffs?.rerollOneFailedHit) add('rerollOneFailedHit', t('rerollOneFailedHit'))
-  if (unitBuffs?.rerollOneFailedWound) add('rerollOneFailedWound', t('rerollOneFailedWound'))
+  if (unitBuffs.rerollFailedHit)
+    add('rerollFailedHit', `${t('rerollFailedHit')} ${unitBuffs.rerollFailedHit}`)
+  if (unitBuffs.rerollFailedWound)
+    add('rerollFailedWound', `${t('rerollFailedWound')} ${unitBuffs.rerollFailedWound}`)
   if (unitBuffs?.plusOneAttack) add('plusOneAttack', t('plusOneAttack'))
   if (unitBuffs?.plusOneDamage) add('plusOneDamage', t('plusOneDamage'))
   if (unitBuffs?.plusOneAp) add('plusOneAp', t('plusOneAp'))

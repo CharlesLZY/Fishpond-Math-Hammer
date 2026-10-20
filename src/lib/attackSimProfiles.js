@@ -104,7 +104,7 @@ export const createDefaultDefenderProfile = () =>
 
 export const serializeAttackerProfile = ({ weapons, unitBuffs }) => ({
   weapons: weapons.map(omitProfileId),
-  unitBuffs,
+  unitBuffs: makeUnitBuffs(unitBuffs || {}),
 })
 
 export const serializeDefenderProfile = ({ targets, defenderUnitBuffs }) => ({

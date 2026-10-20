@@ -1,4 +1,4 @@
-import { isTargetUnitBuffsEmpty, isUnitBuffsEmpty, normalizeAttackBonusValue } from './dice'
+import { isTargetUnitBuffsEmpty, isUnitBuffsEmpty, makeUnitBuffs, normalizeAttackBonusValue } from './dice'
 
 const rerollLabel = (mode, t) => {
   switch (mode) {
@@ -76,10 +76,13 @@ const describeWeapon = (weapon, t) => {
   return head + (extras.length ? ` [${extras.join(', ')}]` : '')
 }
 
-const describeUnitBuffs = (unitBuffs, t) => {
+const describeUnitBuffs = (value, t) => {
+  const unitBuffs = makeUnitBuffs(value || {})
   const parts = []
-  if (unitBuffs.rerollOneFailedHit) parts.push(t('rerollOneFailedHit'))
-  if (unitBuffs.rerollOneFailedWound) parts.push(t('rerollOneFailedWound'))
+  if (unitBuffs.rerollFailedHit)
+    parts.push(`${t('rerollFailedHit')} ${unitBuffs.rerollFailedHit}`)
+  if (unitBuffs.rerollFailedWound)
+    parts.push(`${t('rerollFailedWound')} ${unitBuffs.rerollFailedWound}`)
   if (unitBuffs.plusOneAttack) parts.push(t('plusOneAttack'))
   if (unitBuffs.plusOneDamage) parts.push(t('plusOneDamage'))
   if (unitBuffs.plusOneAp) parts.push(t('plusOneAp'))

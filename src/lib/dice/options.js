@@ -42,6 +42,11 @@ export const woundRerollOptions = [
   ...rerollOptions.slice(2)
 ]
 
+export const failedRerollOptions = Array.from({ length: 3 }, (_, index) => {
+  const value = (index + 1).toString()
+  return { value, label: value }
+})
+
 export const fnpOptions = [
   { value: '2', label: '2+' },
   { value: '3', label: '3+' },

@@ -6,6 +6,7 @@ import {
   antiOptions,
   rerollOptions,
   woundRerollOptions,
+  failedRerollOptions,
   critOptions,
   sustainedOptions
 } from '../lib/dice/options'
@@ -28,7 +29,7 @@ function WoundSuccessCalculator() {
   const [numDice, setNumDice] = useState('20')
   const [toHit, setToHit] = useState({ value: '3', label: '3+' })
   const [hitReroll, setHitReroll] = useState({ value: 'no-reroll', label: 'No Reroll' })
-  const [rerollOneFailedHit, setRerollOneFailedHit] = useState(false)
+  const [rerollFailedHit, setRerollFailedHit] = useState(0)
   const [sustainedHit, setSustainedHit] = useState(false)
   const [sustainedHitValue, setSustainedHitValue] = useState('1')
   const [lethalHit, setLethalHit] = useState(false)
@@ -36,7 +37,7 @@ function WoundSuccessCalculator() {
   // Wound Roll State
   const [toWound, setToWound] = useState({ value: '4', label: '4+' })
   const [woundReroll, setWoundReroll] = useState({ value: 'no-reroll', label: 'No Reroll' })
-  const [rerollOneFailedWound, setRerollOneFailedWound] = useState(false)
+  const [rerollFailedWound, setRerollFailedWound] = useState(0)
   const [devastatingWounds, setDevastatingWounds] = useState(false)
   const [critEnabled, setCritEnabled] = useState(false)
   const [crit, setCrit] = useState({ value: '6', label: '6+' })
@@ -92,8 +93,8 @@ function WoundSuccessCalculator() {
         sustainedHits: sustainedHit ? sustainedHitValue : 'off',
         lethalHits: lethalHit,
         devastatingWounds,
-        rerollOneFailedHit,
-        rerollOneFailedWound,
+        rerollFailedHit,
+        rerollFailedWound,
       }))
     } catch (calculationError) {
       setResult(null)
@@ -106,10 +107,13 @@ function WoundSuccessCalculator() {
   // Attack Simulator profile buffs so the visual style stays consistent.
   const hitBuffs = [
     {
-      key: 'rerollOneFailedHit',
-      label: 'REROLL ONE HIT',
-      active: rerollOneFailedHit,
-      onToggle: () => setRerollOneFailedHit((value) => !value)
+      key: 'rerollFailedHit',
+      label: 'REROLL FAILED HIT DICE',
+      active: rerollFailedHit > 0,
+      onToggle: () => setRerollFailedHit((value) => value ? 0 : 1),
+      value: (rerollFailedHit || 1).toString(),
+      valueOptions: failedRerollOptions,
+      onValueChange: (value) => setRerollFailedHit(Number(value))
     },
     {
       key: 'critHit',
@@ -140,10 +144,13 @@ function WoundSuccessCalculator() {
 
   const woundBuffs = [
     {
-      key: 'rerollOneFailedWound',
-      label: 'REROLL ONE WOUND',
-      active: rerollOneFailedWound,
-      onToggle: () => setRerollOneFailedWound((value) => !value)
+      key: 'rerollFailedWound',
+      label: 'REROLL FAILED WOUND DICE',
+      active: rerollFailedWound > 0,
+      onToggle: () => setRerollFailedWound((value) => value ? 0 : 1),
+      value: (rerollFailedWound || 1).toString(),
+      valueOptions: failedRerollOptions,
+      onValueChange: (value) => setRerollFailedWound(Number(value))
     },
     {
       key: 'devastating',

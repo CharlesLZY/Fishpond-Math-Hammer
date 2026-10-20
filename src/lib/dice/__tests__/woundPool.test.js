@@ -46,26 +46,85 @@ describe('shared D6 reroll outcomes', () => {
 
   it('spends no single opportunity on an original 1 covered by reroll-ones', () => {
     const outcomes = getD6RollOutcomes(4, 'reroll-one', 6, true)
-    expect(outcomes.filter((row) => row.usedSingle)
+    expect(outcomes.filter((row) => row.usedFailedReroll)
       .reduce((sum, row) => sum + row.probability, 0)).toBeCloseTo(1 / 3, 12)
   })
 
   it('does not add another reroll after a non-critical reroll fails', () => {
     const outcomes = getD6RollOutcomes(4, 'reroll-non-critical', 6, true)
-    expect(outcomes.some((row) => row.usedSingle)).toBe(false)
+    expect(outcomes.some((row) => row.usedFailedReroll)).toBe(false)
     expect(outcomes.filter((row) => row.success)
       .reduce((sum, row) => sum + row.probability, 0)).toBeCloseTo(7 / 12, 12)
   })
 
   it('keeps critical 2s with reroll-ones-and-twos and ANTI 2+', () => {
     const outcomes = getD6RollOutcomes(2, 'reroll-one-two', 2, true)
-    expect(outcomes.some((row) => row.usedSingle)).toBe(false)
+    expect(outcomes.some((row) => row.usedFailedReroll)).toBe(false)
     expect(outcomes.filter((row) => row.isCrit)
       .reduce((sum, row) => sum + row.probability, 0)).toBeCloseTo(35 / 36, 12)
   })
 })
 
 describe('calculateWoundPool', () => {
+  it.each([1, 2, 3])('matches an independent finite-pool distribution with X = %i', (count) => {
+    const expected = Array(5).fill(0)
+    const successes = (mask, dice) =>
+      Array.from({ length: dice }, (_, index) => (mask >> index) & 1)
+        .reduce((sum, value) => sum + value, 0)
+    for (let originals = 0; originals < 16; originals++) {
+      const passed = successes(originals, 4)
+      const rerolls = Math.min(4 - passed, count)
+      for (let replacements = 0; replacements < 2 ** rerolls; replacements++) {
+        expected[passed + successes(replacements, rerolls)] += 1 / (16 * 2 ** rerolls)
+      }
+    }
+    const mean = expected.reduce((sum, chance, wounds) => sum + chance * wounds, 0)
+    const variance = expected.reduce(
+      (sum, chance, wounds) => sum + chance * (wounds - mean) ** 2, 0
+    )
+    for (const options of [
+      { torrent: true, rerollFailedWound: count },
+      { toHit: 4, critHit: 4, lethalHits: true, rerollFailedHit: count },
+    ]) {
+      const result = calculateWoundPool({ numAttacks: 4, toWound: 4, ...options })
+
+      expect(result.expectedWounds).toBeCloseTo(mean, 12)
+      expect(result.stdDev ** 2).toBeCloseTo(variance, 12)
+      expected.forEach((chance, wounds) => {
+        expect(probability(result, wounds)).toBeCloseTo(chance, 12)
+      })
+    }
+  })
+
+  it.each([1, 2, 3])('caps X = %i at one reroll per original die', (count) => {
+    const result = calculateWoundPool({
+      numAttacks: 1,
+      toHit: 4,
+      toWound: 4,
+      hitReroll: 'reroll-one',
+      woundReroll: 'reroll-one',
+      rerollFailedHit: count,
+      rerollFailedWound: count,
+    })
+
+    expect(result.expectedHits).toBeCloseTo(3 / 4, 12)
+    expect(result.expectedWounds).toBeCloseTo(9 / 16, 12)
+    expect(probability(result, 1)).toBeCloseTo(9 / 16, 12)
+  })
+
+  it('migrates legacy flags but lets explicit zero counts disable them', () => {
+    const legacy = { numAttacks: 4, rerollOneFailedHit: true, rerollOneFailedWound: true }
+
+    expectSameResults(
+      calculateWoundPool(legacy),
+      calculateWoundPool({ numAttacks: 4, rerollFailedHit: 1, rerollFailedWound: 1 })
+    )
+    expectSameResults(
+      calculateWoundPool({ ...legacy, rerollFailedHit: 0, rerollFailedWound: 0 }),
+      calculateWoundPool({ numAttacks: 4 })
+    )
+  })
+
   it('preserves default expected values while including randomness in both hit and wound rolls', () => {
     const result = calculateWoundPool({ numAttacks: 20 })
 
@@ -223,10 +282,12 @@ describe('calculateWoundPool', () => {
     'does not improve or change the distribution when existing %s already covers all failures',
     (mode) => {
       const options = { numAttacks: 3, toHit: 4, hitReroll: mode, woundReroll: mode }
-      expectSameResults(
-        calculateWoundPool({ ...options, rerollOneFailedHit: true, rerollOneFailedWound: true }),
-        calculateWoundPool(options)
-      )
+      for (const count of [1, 2, 3]) {
+        expectSameResults(
+          calculateWoundPool({ ...options, rerollFailedHit: count, rerollFailedWound: count }),
+          calculateWoundPool(options)
+        )
+      }
     }
   )
 
@@ -348,8 +409,8 @@ describe('calculateWoundPool', () => {
       sustainedHits: '9',
       lethalHits: true,
       devastatingWounds: true,
-      rerollOneFailedHit: true,
-      rerollOneFailedWound: true,
+      rerollFailedHit: 3,
+      rerollFailedWound: 3,
     })
 
     expect(result.distributionData).toHaveLength(1001)
@@ -371,6 +432,11 @@ describe('calculateWoundPool', () => {
     { sustainedHits: 'D8' },
     { hitReroll: 'invalid' },
     { woundReroll: 'invalid' },
+    { rerollFailedHit: -1 },
+    { rerollFailedHit: 4 },
+    { rerollFailedHit: 1.5 },
+    { rerollFailedWound: '2' },
+    { rerollFailedWound: 4 },
   ])('rejects invalid input explicitly: %j', (options) => {
     expect(() => calculateWoundPool({ numAttacks: 2, ...options })).toThrow()
   })
@@ -384,6 +450,10 @@ describe('calculator and simulator consistency', () => {
     { sustainedHits: 'D3', lethalHits: true, devastatingWounds: true },
     { sustainedHits: 'D6', hitReroll: 'reroll-one', woundReroll: 'reroll-one' },
     { toHit: 6, critHit: 2, lethalHits: true, sustainedHits: '1' },
+    { rerollFailedHit: 0, rerollFailedWound: 3 },
+    { rerollFailedHit: 3, rerollFailedWound: 0 },
+    { rerollFailedHit: 2, rerollFailedWound: 3, hitReroll: 'reroll-one', sustainedHits: 'D3' },
+    { rerollFailedHit: 3, rerollFailedWound: 2, woundReroll: 'reroll-one-two', devastatingWounds: true },
   ])('matches Monte Carlo wounds, variance and distribution for %j', (overrides) => {
     const options = {
       numAttacks: 4,
@@ -393,8 +463,8 @@ describe('calculator and simulator consistency', () => {
       woundReroll: 'no-reroll',
       critHit: 6,
       sustainedHits: 'off',
-      rerollOneFailedHit: true,
-      rerollOneFailedWound: true,
+      rerollFailedHit: 1,
+      rerollFailedWound: 1,
       ...overrides,
     }
     const exact = calculateWoundPool(options)
@@ -423,7 +493,7 @@ describe('calculator and simulator consistency', () => {
       }],
       [{ models: 100, wounds: 1, toughness: 4, save: 7 }],
       20000,
-      { rerollOneFailedHit: true, rerollOneFailedWound: true }
+      { rerollFailedHit: options.rerollFailedHit, rerollFailedWound: options.rerollFailedWound }
     )
 
     expect(Math.abs(simulation.expectedDamage - exact.expectedWounds)).toBeLessThan(0.06)

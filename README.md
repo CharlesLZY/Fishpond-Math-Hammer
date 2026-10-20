@@ -16,8 +16,14 @@ target editors retain their listed order without up/down controls. Dropdowns
 omit the clear-X control without changing selection or reset behavior.
 
 Units resolve in the order they were added, preserving the defender's remaining
-models and wounds. Each unit has its own single-hit and single-wound reroll
-budgets, shared across that unit's weapons. Deferred Devastating Wounds resolve
+models and wounds. Each unit has independent **Reroll Failed Hit/Wound Dice X**
+budgets (X = 1-3), shared across that unit's weapons and firing models.
+Existing eligible rerolls take priority without spending X; the limited buff
+only rerolls original failures not already rerolled. No die can be rerolled
+twice, including when combining reroll ones, failures, or non-critical rolls.
+Duplicate saved/additional buffs use the larger X, not their sum. Older
+single-failure buffs load as X = 1. The 40K Dice Calculator uses the same
+priorities and exact finite budgets. Deferred Devastating Wounds resolve
 before the next unit attacks, and Blast/Cleave use the target model count when
 each attacking unit selects its target. Collapsed units still participate.
 Results show the combined attack, and copied reports group weapons and buffs

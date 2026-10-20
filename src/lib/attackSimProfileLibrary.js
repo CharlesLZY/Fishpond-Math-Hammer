@@ -1,4 +1,4 @@
-import { isValidDiceExpression } from './dice'
+import { isValidDiceExpression, normalizeFailedRerollCount } from './dice'
 
 export const ATTACKER_PROFILE_LIBRARY_KIND =
   'fishpond.attack-simulator.attacker-profile-library'
@@ -108,9 +108,15 @@ const normalizeAttackerProfile = (profile, path) => {
     const error = validateWeaponShape(weapon)
     if (error) throw new Error(`${path}.weapons[${index}]: ${error}`)
   })
+  const unitBuffs = normalizeOptionalRecord(profile.unitBuffs, `${path}.unitBuffs`)
+  for (const key of ['rerollFailedHit', 'rerollFailedWound']) {
+    if (unitBuffs?.[key] != null) {
+      normalizeFailedRerollCount(unitBuffs[key], false, `${path}.unitBuffs.${key}`)
+    }
+  }
   return {
     weapons: profile.weapons.map(stripId),
-    unitBuffs: normalizeOptionalRecord(profile.unitBuffs, `${path}.unitBuffs`),
+    unitBuffs,
   }
 }
 

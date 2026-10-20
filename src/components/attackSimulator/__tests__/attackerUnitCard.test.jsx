@@ -177,7 +177,7 @@ describe('Simulator unit cards', () => {
     expect(html).toContain('title="Move down"')
   })
 
-  it('retains the existing combined aura and single-roll buff editors', () => {
+  it('retains combined aura and limited failed-roll buff editors', () => {
     const html = renderCard({
       unit: {
         id: 1,
@@ -186,8 +186,8 @@ describe('Simulator unit cards', () => {
         unitBuffs: makeUnitBuffs({
           hitReroll: 'reroll-one',
           woundReroll: 'reroll-one',
-          rerollOneFailedHit: true,
-          rerollOneFailedWound: true,
+          rerollFailedHit: 2,
+          rerollFailedWound: 3,
         }),
       },
     })
@@ -195,8 +195,10 @@ describe('Simulator unit cards', () => {
     expect(html).toContain('Hit Reroll')
     expect(html).toContain('Wound Reroll')
     expect(html).toContain('Reroll Ones')
-    expect(html).toContain('aria-pressed="true">REROLL ONE HIT')
-    expect(html).toContain('aria-pressed="true">REROLL ONE WOUND')
+    expect(html).toContain('aria-pressed="true">REROLL FAILED HIT DICE')
+    expect(html).toContain('aria-pressed="true">REROLL FAILED WOUND DICE')
+    expect(html).toMatch(/aria-label="REROLL FAILED HIT DICE value"[^>]*value="2"/)
+    expect(html).toMatch(/aria-label="REROLL FAILED WOUND DICE value"[^>]*value="3"/)
     expect(html).toContain('Edit buffs')
   })
 

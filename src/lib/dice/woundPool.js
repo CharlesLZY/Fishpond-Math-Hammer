@@ -1,6 +1,6 @@
 import { buildDistribution } from './binomial'
 import { REROLL_VALUES, Z_95 } from './constants'
-import { getD6RollOutcomes } from './d6Rerolls'
+import { getD6RollOutcomes, normalizeFailedRerollCount } from './d6Rerolls'
 
 const REWARDS = ['hits', 'crits', 'devastating']
 const REROLL_MODES = new Set(Object.values(REROLL_VALUES))
@@ -35,8 +35,8 @@ const sustainedOutcomes = (value) => {
   return [{ hits, probability: 1 }]
 }
 
-const buildWoundPools = (maxRolls, rollOutcomes) =>
-  [0, 1].map((initialRemaining) => {
+const buildWoundPools = (maxRolls, rollOutcomes, maxRerolls) =>
+  Array.from({ length: maxRerolls + 1 }, (_, initialRemaining) => {
     const pools = [[{
       remaining: initialRemaining,
       wounds: 0,
@@ -47,8 +47,8 @@ const buildWoundPools = (maxRolls, rollOutcomes) =>
     for (let count = 1; count <= maxRolls; count++) {
       const next = new Map()
       for (const previous of pools[count - 1]) {
-        for (const roll of rollOutcomes[previous.remaining]) {
-          const remaining = previous.remaining && !roll.usedSingle ? 1 : 0
+        for (const roll of rollOutcomes[Number(previous.remaining > 0)]) {
+          const remaining = previous.remaining - Number(roll.usedFailedReroll)
           const wounds = previous.wounds + Number(roll.success)
           const key = `${remaining}:${wounds}`
           if (!next.has(key)) {
@@ -71,17 +71,21 @@ const buildWoundPools = (maxRolls, rollOutcomes) =>
     return pools
   })
 
-const buildAttackTransitions = (hitOutcomes, extras, woundPools, lethalHits, devastatingWounds) =>
-  Array.from({ length: 4 }, (_, state) => {
+const buildAttackTransitions = (
+  hitOutcomes, extras, woundPools, lethalHits, devastatingWounds, maxHitRerolls
+) => {
+  const woundStates = woundPools.length
+  return Array.from({ length: (maxHitRerolls + 1) * woundStates }, (_, state) => {
     const transitions = new Map()
-    for (const hit of hitOutcomes[Number(!!(state & 2))]) {
-      const remainingHit = (state & 2) && !hit.usedSingle ? 2 : 0
+    const hitRemaining = Math.floor(state / woundStates)
+    for (const hit of hitOutcomes[Number(hitRemaining > 0)]) {
+      const remainingHit = hitRemaining - Number(hit.usedFailedReroll)
       for (const extra of hit.isCrit ? extras : [{ hits: 0, probability: 1 }]) {
         const hits = hit.success ? 1 + extra.hits : 0
         const lethal = Number(hit.isCrit && lethalHits)
         const weight = hit.probability * extra.probability
-        for (const wound of woundPools[state & 1][hits - lethal]) {
-          const nextState = remainingHit + wound.remaining
+        for (const wound of woundPools[state % woundStates][hits - lethal]) {
+          const nextState = remainingHit * woundStates + wound.remaining
           const wounds = lethal + wound.wounds
           const key = `${nextState}:${wounds}`
           if (!transitions.has(key)) {
@@ -103,6 +107,7 @@ const buildAttackTransitions = (hitOutcomes, extras, woundPools, lethalHits, dev
     }
     return [...transitions.values()]
   })
+}
 
 const summarizeReward = (moments, reward, maximum) => {
   const mean = moments.reduce((sum, entry) => sum + entry.first[reward], 0)
@@ -128,6 +133,8 @@ export const calculateWoundPool = ({
   sustainedHits = 'off',
   lethalHits = false,
   devastatingWounds = false,
+  rerollFailedHit,
+  rerollFailedWound,
   rerollOneFailedHit = false,
   rerollOneFailedWound = false,
 }) => {
@@ -137,6 +144,13 @@ export const calculateWoundPool = ({
   if (!REROLL_MODES.has(hitReroll) || !REROLL_MODES.has(woundReroll)) {
     throw new Error('Invalid hit or wound reroll mode.')
   }
+  const failedHitRerolls = normalizeFailedRerollCount(
+    rerollFailedHit, rerollOneFailedHit, 'Failed hit reroll count'
+  )
+  const hitRerolls = torrent ? 0 : failedHitRerolls
+  const woundRerolls = normalizeFailedRerollCount(
+    rerollFailedWound, rerollOneFailedWound, 'Failed wound reroll count'
+  )
   const hitThreshold = torrent ? 2 : thresholdValue(toHit, 'Hit threshold')
   const criticalHit = thresholdValue(critHit, 'Critical hit threshold')
   const criticalWound = antiValue == null ? 6 : thresholdValue(antiValue, 'ANTI threshold')
@@ -145,28 +159,29 @@ export const calculateWoundPool = ({
   const maxPerAttack = 1 + Math.max(...extras.map((extra) => extra.hits))
   const hitOutcomes = [false, true].map((available) =>
     torrent
-      ? [{ success: true, isCrit: false, usedSingle: false, probability: 1 }]
+      ? [{ success: true, isCrit: false, usedFailedReroll: false, probability: 1 }]
       : getD6RollOutcomes(hitThreshold, hitReroll, criticalHit, available)
   )
   const woundOutcomes = [false, true].map((available) =>
     getD6RollOutcomes(woundThreshold, woundReroll, criticalWound, available)
   )
-  const woundPools = buildWoundPools(maxPerAttack, woundOutcomes)
+  const woundPools = buildWoundPools(maxPerAttack, woundOutcomes, woundRerolls)
   const transitions = buildAttackTransitions(
-    hitOutcomes, extras, woundPools, lethalHits, devastatingWounds
+    hitOutcomes, extras, woundPools, lethalHits, devastatingWounds, hitRerolls
   )
 
-  // Four budget states preserve correlations across every attack and generated hit.
-  const initialState = Number(!torrent && rerollOneFailedHit) * 2 + Number(rerollOneFailedWound)
-  let probabilities = Array.from({ length: 4 }, () => new Float64Array(1))
-  let moments = Array.from({ length: 4 }, () => makeMoments())
+  // Budget states preserve correlations across every attack and generated hit.
+  const initialState = hitRerolls * woundPools.length + woundRerolls
+  const stateCount = transitions.length
+  let probabilities = Array.from({ length: stateCount }, () => new Float64Array(1))
+  let moments = Array.from({ length: stateCount }, () => makeMoments())
   probabilities[initialState][0] = 1
   moments[initialState].probability = 1
 
   for (let attack = 0; attack < numAttacks; attack++) {
-    const next = Array.from({ length: 4 }, () => new Float64Array((attack + 1) * maxPerAttack + 1))
-    const nextMoments = Array.from({ length: 4 }, () => makeMoments())
-    for (let state = 0; state < 4; state++) {
+    const next = Array.from({ length: stateCount }, () => new Float64Array((attack + 1) * maxPerAttack + 1))
+    const nextMoments = Array.from({ length: stateCount }, () => makeMoments())
+    for (let state = 0; state < stateCount; state++) {
       const previous = moments[state]
       if (previous.probability === 0) continue
       for (const transition of transitions[state]) {
