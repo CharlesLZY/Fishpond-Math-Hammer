@@ -298,6 +298,18 @@ describe('simulateAttack — basic correctness', () => {
 })
 
 describe('simulateAttack — saving throws', () => {
+  const salvoWeapon = (overrides = {}) => baseWeapon({
+    attacks: '3',
+    torrent: true,
+    ap: 3,
+    damage: '3',
+    ...overrides,
+  })
+  const mixedTargets = (front = {}, back = {}) => [
+    baseTarget({ models: 1, wounds: 2, save: 3, ...front }),
+    baseTarget({ models: 1, wounds: 3, save: 3, invulnSave: 4, ...back }),
+  ]
+
   it.each([
     { label: 'armor', save: 2, invulnSave: 0, ap: 0 },
     { label: 'invulnerable', save: 6, invulnSave: 2, ap: 4 },
@@ -317,6 +329,146 @@ describe('simulateAttack — saving throws', () => {
     expect(result.expectedDamage).toBe(1)
     expect(result.expectedKills).toBe(1)
     expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { saves: [4, 2, 4] },
+    { saves: [2, 4, 4] },
+    { saves: [4, 4, 2] },
+  ])('sorts $saves so the 2W model dies and both 4s protect the invulnerable model', ({ saves }) => {
+    const random = mockD6Faces(6, 6, 6, ...saves)
+    const result = simulateAttack([salvoWeapon()], mixedTargets(), 1)
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(result.expectedKills).toBe(1)
+    expect(result.expectedDamage).toBe(2)
+    expect(result.wipeProbability).toBe(0)
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('includes all firing models of one weapon card in the same save pool', () => {
+    const random = mockD6Faces(6, 6, 6, 4, 2, 4)
+    const result = simulateAttack(
+      [salvoWeapon({ attacks: '1', modelsFiring: 3 })], mixedTargets(), 1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it.each(['weapon cards', 'attacking units'])('does not combine pools across separate %s', (scope) => {
+    const random = mockD6Faces(6, 4, 6, 6, 2, 4)
+    const weapons = [salvoWeapon({ attacks: '1' }), salvoWeapon({ attacks: '2' })]
+    const result = scope === 'weapon cards'
+      ? simulateAttack(weapons, mixedTargets(), 1)
+      : simulateMultiUnitAttack(weapons.map((weapon) => ({ weapons: [weapon] })), mixedTargets(), 1)
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 1])
+    expect(result.expectedDamage).toBe(5)
+    expect(result.wipeProbability).toBe(100)
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('rolls every saving die even when only a later defensive profile can save', () => {
+    const random = mockD6Faces(6, 6, 6, 4, 2, 4)
+    const result = simulateAttack([salvoWeapon()], mixedTargets({ save: 7 }), 1)
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('omits irrelevant saving dice only when no remaining group can possibly save', () => {
+    const random = mockD6Faces(6, 6, 6)
+    const result = simulateAttack(
+      [salvoWeapon()], mixedTargets({ save: 7 }, { save: 7, invulnSave: 0 }), 1
+    )
+
+    expect(result.expectedKills).toBe(2)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it('uses the new group armor and AP reduction for each sorted result', () => {
+    const random = mockD6Faces(6, 6, 6, 6, 2, 5)
+    const result = simulateAttack(
+      [salvoWeapon()], mixedTargets({}, { invulnSave: 0, minusOneAp: true }), 1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('keeps natural 1 a failure and does not auto-save a 6 against an impossible save', () => {
+    const random = mockD6Faces(6, 6, 6, 6, 1, 6)
+    const result = simulateAttack(
+      [salvoWeapon({ ap: 0, damage: '1' })],
+      mixedTargets({ wounds: 1, save: 2 }, { models: 2, wounds: 1, save: 7, invulnSave: 0 }),
+      1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 2])
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('continues the same allocation group if FNP keeps its current model alive', () => {
+    const random = mockD6Faces(6, 6, 6, 4, 2, 4, 4, 1, 1)
+    const result = simulateAttack(
+      [salvoWeapon({ damage: '2' })], mixedTargets({ fnp: 4 }), 1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(result.expectedDamage).toBe(3)
+    expect(random).toHaveBeenCalledTimes(9)
+  })
+
+  it.each([
+    { buff: { damageOne: true, wounds: 3 }, damage: 4 },
+    { buff: { minusOneDamage: true, wounds: 5 }, damage: 6 },
+    { buff: { halfDamage: true, wounds: 5 }, damage: 6 },
+  ])('applies each current group damage modifiers: $buff', ({ buff, damage }) => {
+    const random = mockD6Faces(6, 6, 6, 3, 1, 2)
+    const result = simulateAttack(
+      [salvoWeapon()], mixedTargets({ halfDamage: true }, buff), 1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(result.expectedDamage).toBe(damage)
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('rolls and rerolls random damage only after a sorted result fails its current save', () => {
+    const random = mockD6Faces(6, 6, 6, 4, 2, 4, 1, 3)
+    const result = simulateAttack(
+      [salvoWeapon({ damage: 'D6', damageReroll: 'reroll-1-2-3', damageRerollScope: 'single' })],
+      mixedTargets(),
+      1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(result.expectedDamage).toBe(2)
+    expect(random).toHaveBeenCalledTimes(8)
+  })
+
+  it('puts Lethal Hits and Sustained Hits wounds into the same sorted pool', () => {
+    const random = mockD6Faces(6, 6, 6, 4, 2, 4)
+    const result = simulateAttack(
+      [salvoWeapon({ attacks: '1', torrent: false, lethalHits: true, sustainedHits: '2' })],
+      mixedTargets(),
+      1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it('excludes Devastating Wounds from saves and resolves them after this card normal damage', () => {
+    const random = mockD6Faces(6, 4, 4, 4, 2)
+    const result = simulateAttack(
+      [salvoWeapon({ devastatingWounds: true })], mixedTargets({}, { wounds: 5 }), 1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(result.expectedDamage).toBe(5)
+    expect(random).toHaveBeenCalledTimes(5)
   })
 })
 
@@ -723,6 +875,31 @@ describe.each([
   { name: 'Blast X', enabledKey: 'blast', valueKey: 'blastValue' },
   { name: 'Cleave X', enabledKey: 'cleaveEnabled', valueKey: 'cleaveValue' },
 ])('simulateAttack — $name scaling and limits', ({ enabledKey, valueKey }) => {
+  it.each([false, true])(
+    'keeps A+2 after the first weapon reduces 10 models to 1 (mixed abilities: %s)',
+    (mixed) => {
+      const firstAbility = mixed
+        ? (enabledKey === 'blast' ? { cleaveEnabled: true } : { blast: true })
+        : { [enabledKey]: true }
+      const random = mockD6Faces(...Array(12).fill(6))
+      const result = simulateAttack(
+        [
+          baseWeapon({ attacks: '7', torrent: true, ...firstAbility }),
+          baseWeapon({ attacks: '1', torrent: true, [enabledKey]: true, [valueKey]: 1 }),
+        ],
+        [
+          baseTarget({ models: 9, save: 7 }),
+          baseTarget({ models: 1, wounds: 10, save: 7 }),
+        ],
+        1
+      )
+
+      expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([9, 0])
+      expect(result.expectedDamage).toBe(12)
+      expect(random).toHaveBeenCalledTimes(12)
+    }
+  )
+
   it.each([
     [4, 1],
     [5, 3],
@@ -1143,12 +1320,252 @@ describe('simulateAttack — single-model wipe equals expected kills', () => {
 })
 
 describe('simulateAttack — Devastating Wounds (11e RAW)', () => {
-  // Per the 11e core rule, a [DEVASTATING WOUNDS] critical wound inflicts
-  // mortal wounds equal to the attack's Damage characteristic, AND those
-  // mortal wounds do not spill across models if the model they are
-  // allocated to is destroyed (excess is lost). Furthermore, DW attacks
-  // are only allocated AFTER all other attacks made by the attacking unit
-  // have been resolved.
+  const dwWeapon = (overrides = {}) => baseWeapon({
+    attacks: '1', torrent: true, devastatingWounds: true, ...overrides,
+  })
+
+  it.each([
+    { dwFirst: true, kills: [1, 0], damage: 2 },
+    { dwFirst: false, kills: [1, 1], damage: 3 },
+  ])('resolves each card completely in display order (DW first: $dwFirst)', ({
+    dwFirst, kills, damage,
+  }) => {
+    const random = mockD6Faces(6, 6)
+    const devastating = dwWeapon({ damage: '2' })
+    const normal = baseWeapon({ attacks: '1', torrent: true })
+    const result = simulateAttack(
+      dwFirst ? [devastating, normal] : [normal, devastating],
+      [
+        baseTarget({ models: 1, wounds: 1, save: 7 }),
+        baseTarget({ models: 1, wounds: 2, save: 7 }),
+      ],
+      1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual(kills)
+    expect(result.expectedDamage).toBe(damage)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it('resolves the card normal damage before its mortals, then advances to the next card', () => {
+    const random = mockD6Faces(6, 3, 4, 1, 4)
+    const result = simulateAttack(
+      [
+        dwWeapon({ attacks: '2', damage: 'D6' }),
+        baseWeapon({ attacks: '1', torrent: true }),
+      ],
+      [baseTarget({ models: 2, wounds: 2, save: 7 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(1)
+    expect(result.expectedDamage).toBe(3)
+    expect(random).toHaveBeenCalledTimes(5)
+  })
+
+  it('discards remaining mortals and skips later cards after the target is wiped', () => {
+    const random = mockD6Faces(6, 6)
+    const result = simulateAttack(
+      [dwWeapon({ attacks: '2' }), baseWeapon({ attacks: '1', torrent: true })],
+      [baseTarget({ models: 1, save: 2, invulnSave: 2 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(1)
+    expect(result.expectedDamage).toBe(1)
+    expect(random).toHaveBeenCalledTimes(2)
+  })
+
+  it('caps each critical at one model independently, including FNP and discarded excess', () => {
+    const random = mockD6Faces(6, 6, 1, 1, 1, 1)
+    const result = simulateAttack(
+      [dwWeapon({ attacks: '2', damage: '3' })],
+      [baseTarget({ models: 3, wounds: 2, save: 2, invulnSave: 2, fnp: 4 })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(2)
+    expect(result.expectedDamage).toBe(4)
+    expect(random).toHaveBeenCalledTimes(6)
+  })
+
+  it.each([
+    { buff: 'halfDamage', modifiedDamage: 2 },
+    { buff: 'minusOneDamage', modifiedDamage: 3 },
+    { buff: 'damageOne', modifiedDamage: 1 },
+  ])('applies $buff to D for both normal damage and DW conversion', ({ buff, modifiedDamage }) => {
+    const target = baseTarget({ models: 1, wounds: 4, save: 7, [buff]: true })
+    const mortalRandom = mockD6Faces(6)
+    const devastating = simulateAttack([dwWeapon({ damage: '4' })], [target], 1)
+
+    expect(devastating.expectedKills).toBe(0)
+    expect(devastating.expectedDamage).toBe(modifiedDamage)
+    expect(mortalRandom).toHaveBeenCalledTimes(1)
+
+    const normalRandom = mockD6Faces(6)
+    const normal = simulateAttack(
+      [baseWeapon({ attacks: '1', torrent: true, damage: '4' })], [target], 1
+    )
+
+    expect(normal.expectedKills).toBe(0)
+    expect(normal.expectedDamage).toBe(modifiedDamage)
+    expect(normalRandom).toHaveBeenCalledTimes(1)
+
+    const mixedRandom = mockD6Faces(6, 4)
+    const mixed = simulateAttack(
+      [dwWeapon({ attacks: '2', damage: '4' })], [{ ...target, wounds: 8 }], 1
+    )
+
+    expect(mixed.expectedKills).toBe(0)
+    expect(mixed.expectedDamage).toBe(2 * modifiedDamage)
+    expect(mixedRandom).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { buff: 'halfDamage', modifiedDamage: 3 },
+    { buff: 'minusOneDamage', modifiedDamage: 4 },
+    { buff: 'damageOne', modifiedDamage: 1 },
+  ])('combines unit-granted Damage increases with $buff before conversion', ({ buff, modifiedDamage }) => {
+    const random = mockD6Faces(6)
+    const result = simulateAttack(
+      [dwWeapon({ damage: '4' })],
+      [baseTarget({ models: 1, wounds: 6, save: 2, invulnSave: 2, [buff]: true })],
+      1,
+      { plusOneDamage: true }
+    )
+
+    expect(result.expectedKills).toBe(0)
+    expect(result.expectedDamage).toBe(modifiedDamage)
+    expect(random).toHaveBeenCalledTimes(1)
+  })
+
+  it('converts the rerolled, modified Damage into mortal wounds', () => {
+    const random = mockD6Faces(6, 1, 6)
+    const result = simulateAttack(
+      [dwWeapon({ damage: 'D6', damageReroll: 'reroll-1-2-3', damageRerollScope: 'single' })],
+      [baseTarget({ models: 2, wounds: 4, save: 2, invulnSave: 2, halfDamage: true })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(0)
+    expect(result.expectedDamage).toBe(3)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it.each([
+    { buff: 'halfDamage', damage: '5', mortals: 3 },
+    { buff: 'minusOneDamage', damage: '4', mortals: 3 },
+    { buff: 'damageOne', damage: '4', mortals: 1 },
+    { buff: 'minusOneDamage', damage: '1', mortals: 1 },
+  ])('converts D $damage with $buff once into exactly $mortals FNP rolls', ({
+    buff, damage, mortals,
+  }) => {
+    const random = mockD6Faces(6, ...Array(mortals).fill(1))
+    const result = simulateAttack(
+      [dwWeapon({ damage })],
+      [baseTarget({ models: 1, wounds: 10, save: 2, invulnSave: 2, fnp: 4, [buff]: true })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(0)
+    expect(result.expectedDamage).toBe(mortals)
+    expect(random).toHaveBeenCalledTimes(1 + mortals)
+  })
+
+  it('uses each current defender profile D modifiers for separate criticals', () => {
+    const random = mockD6Faces(6, 6, 6)
+    const result = simulateAttack(
+      [dwWeapon({ attacks: '3', damage: '4' })],
+      [
+        baseTarget({ models: 1, wounds: 3, save: 2, minusOneDamage: true }),
+        baseTarget({ models: 1, wounds: 3, save: 2, invulnSave: 2, damageOne: true }),
+      ],
+      1
+    )
+
+    expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([1, 0])
+    expect(result.expectedDamage).toBe(5)
+    expect(random).toHaveBeenCalledTimes(3)
+  })
+
+  it.each([
+    { fnp: 2, fnpMortal: 6, face: 3, ignored: true },
+    { fnp: 6, fnpMortal: 2, face: 3, ignored: true },
+    { fnp: 4, fnpMortal: 0, face: 4, ignored: true },
+    { fnp: 0, fnpMortal: 4, face: 4, ignored: true },
+    { fnp: 0, fnpMortal: 4, face: 3, ignored: false },
+    { fnp: 4, fnpMortal: 4, face: 3, ignored: false },
+    { fnp: 0, fnpMortal: 0, face: null, ignored: false },
+  ])('uses one best eligible FNP for mortals: $fnp / $fnpMortal, roll $face', ({
+    fnp, fnpMortal, face, ignored,
+  }) => {
+    const random = mockD6Faces(6, ...(face === null ? [] : [face]))
+    const result = simulateAttack(
+      [dwWeapon()],
+      [baseTarget({ models: 1, save: 2, invulnSave: 2, fnp, fnpMortal })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(ignored ? 0 : 1)
+    expect(random).toHaveBeenCalledTimes(face === null ? 1 : 2)
+  })
+
+  it.each([
+    { fnp: 0, fnpMortal: 2, face: null, kills: 1 },
+    { fnp: 2, fnpMortal: 6, face: 3, kills: 0 },
+    { fnp: 6, fnpMortal: 2, face: 3, kills: 1 },
+  ])('uses only general FNP for normal damage: $fnp / $fnpMortal', ({
+    fnp, fnpMortal, face, kills,
+  }) => {
+    const random = mockD6Faces(6, ...(face === null ? [] : [face]))
+    const result = simulateAttack(
+      [baseWeapon({ attacks: '1', torrent: true })],
+      [baseTarget({ models: 1, save: 7, fnp, fnpMortal })],
+      1
+    )
+
+    expect(result.expectedKills).toBe(kills)
+    expect(random).toHaveBeenCalledTimes(face === null ? 1 : 2)
+  })
+
+  it.each([{ blast: true }, { cleaveEnabled: true }])(
+    'keeps the unit snapshot when earlier DW leave one of ten models: %j',
+    (ability) => {
+      const random = mockD6Faces(...Array(12).fill(6))
+      const result = simulateAttack(
+        [
+          dwWeapon({ attacks: '9' }),
+          baseWeapon({ attacks: '1', torrent: true, ...ability }),
+        ],
+        [
+          baseTarget({ models: 9, save: 7 }),
+          baseTarget({ models: 1, wounds: 10, save: 7 }),
+        ],
+        1
+      )
+
+      expect(result.perProfile.map((profile) => profile.expectedKills)).toEqual([9, 0])
+      expect(result.expectedDamage).toBe(12)
+      expect(random).toHaveBeenCalledTimes(12)
+    }
+  )
+
+  it.each([1, 2, 3])('does not reset X = %i wound rerolls after a DW card', (count) => {
+    const random = mockD6Faces(...Array.from({ length: count }, () => [2, 6]).flat(), 2)
+    const result = simulateAttack(
+      [
+        dwWeapon({ attacks: count.toString() }),
+        baseWeapon({ attacks: '1', torrent: true }),
+      ],
+      [baseTarget({ models: 10, save: 7 })],
+      1,
+      { rerollFailedWound: count }
+    )
+
+    expect(result.expectedKills).toBe(count)
+    expect(result.expectedDamage).toBe(count)
+    expect(random).toHaveBeenCalledTimes(2 * count + 1)
+  })
 
   it('mortal wounds from a Devastating Wound do not spill across models', () => {
     // 100 attacks, torrent (auto-hit), Anti-Infantry 2+ → every wound roll of
@@ -1204,30 +1621,7 @@ describe('simulateAttack — Devastating Wounds (11e RAW)', () => {
     expect(r.expectedDamage).toBeLessThan(1.9)
   })
 
-  it('Devastating Wounds attacks are deferred until after all other weapons resolve', () => {
-    // Setup: target = 2 models with W=2 each, no save.
-    // List order = [DW weapon (D=2), normal weapon (D=1)] — DW is FIRST in
-    // the user-supplied list. Both weapons auto-hit (torrent) and auto-
-    // wound on 2+ via anti-2+ (5/6 wound rate per attack).
-    //
-    // Per RAW the DW attack must resolve LAST. So the normal D=1 attack
-    // hits model A first (leaving A with 1 W), then the DW D=2 mortal
-    // attack must allocate to the wounded model A (kills it, 1 mortal
-    // lost — does NOT carry to model B).
-    //
-    //   Both succeed (25/36): normal → A:1W left; DW → A dies, 1 lost.
-    //                         Total damage = 2, kills = 1.
-    //   Normal only  (5/36):  A:1W left.        Total dmg = 1, kills = 0.
-    //   DW only      (5/36):  A dies (2 mortal). Total dmg = 2, kills = 1.
-    //   Neither      (1/36):  Total dmg = 0, kills = 0.
-    //   Expected damage (deferred) = (50 + 5 + 10 + 0)/36 = 65/36 ≈ 1.806
-    //
-    // If DW were resolved INLINE in list order (the bug): DW fires first
-    // and kills model A clean; normal then hits FRESH model B for 1 dmg.
-    //   Both succeed: dmg = 3, kills = 1.
-    //   Expected damage (inline buggy) = (75 + 10 + 5 + 0)/36 = 90/36 = 2.5
-    //
-    // The 0.7 gap is large enough to detect with 5000 trials.
+  it('matches the expected damage when a DW card resolves before the next normal card', () => {
     const dwWeapon = baseWeapon({
       attacks: '1',
       torrent: true,
@@ -1249,16 +1643,8 @@ describe('simulateAttack — Devastating Wounds (11e RAW)', () => {
       [baseTarget({ models: 2, wounds: 2, save: 7 })],
       5000
     )
-    // Tight bound around the deferred expectation 1.806; well separated
-    // from the buggy inline expectation 2.5.
-    expect(r.expectedDamage).toBeGreaterThan(1.65)
-    expect(r.expectedDamage).toBeLessThan(2.0)
-    // Expected kills under deferred semantics: P(both succeed) + P(DW only)
-    //   = 25/36 + 5/36 = 30/36 ≈ 0.833.
-    // Under buggy inline they would be the same (1 kill in 30/36 cases),
-    // so this assertion is a sanity check, not the discriminator.
-    expect(r.expectedKills).toBeGreaterThan(0.78)
-    expect(r.expectedKills).toBeLessThan(0.88)
+    expect(Math.abs(r.expectedDamage - 2.5)).toBeLessThan(0.1)
+    expect(Math.abs(r.expectedKills - 5 / 6)).toBeLessThan(0.04)
   })
 
   it('Devastating Wounds use regular FNP when no FNP vs Mortal is present', () => {
@@ -1286,29 +1672,25 @@ describe('simulateAttack — Devastating Wounds (11e RAW)', () => {
     expect(r.expectedKills).toBeLessThan(59)
   })
 
-  it('Devastating Wounds prefer FNP vs Mortal over regular FNP', () => {
-    // Same DW setup, but now the target has a very strong normal FNP 2+
-    // and a much weaker FNP vs Mortal 6+. Devastating Wounds must use the
-    // mortal-specific value, so kill expectation is:
-    //   100 * 5/6 to wound * 5/6 through 6+ FNP = 69.4.
-    // If the simulator incorrectly used normal FNP 2+, expectation would be
-    // only ~13.9 kills, which is far outside this range.
-    const r = simulateAttack(
-      [baseWeapon({
-        attacks: '100',
-        torrent: true,
-        antiEnabled: true,
-        antiValue: 2,
-        devastatingWounds: true,
-        damage: '1'
-      })],
-      [baseTarget({ models: 100, wounds: 1, save: 7, fnp: 2, fnpMortal: 6 })],
-      N
-    )
+  it.each([[2, 6], [6, 2]])(
+    'chooses FNP 2+ from general %i+ and mortal-only %i+ in the kill expectation',
+    (fnp, fnpMortal) => {
+      const r = simulateAttack(
+        [baseWeapon({
+          attacks: '100',
+          torrent: true,
+          antiEnabled: true,
+          antiValue: 2,
+          devastatingWounds: true,
+          damage: '1'
+        })],
+        [baseTarget({ models: 100, wounds: 1, save: 7, fnp, fnpMortal })],
+        N
+      )
 
-    expect(r.expectedKills).toBeGreaterThan(66)
-    expect(r.expectedKills).toBeLessThan(73)
-  })
+      expect(Math.abs(r.expectedKills - 100 * (5 / 6) * (1 / 6))).toBeLessThan(1)
+    }
+  )
 })
 
 // ---- Reroll guarantees ----------------------------------------------------

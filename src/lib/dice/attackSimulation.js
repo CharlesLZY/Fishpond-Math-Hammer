@@ -1,9 +1,10 @@
 // Monte Carlo simulator for the full Warhammer 40k 11e attack sequence.
 //
-// Models the standard sequence per attack:
+// Models the sequence per weapon-profile card:
 //   1. Hit roll (with optional torrent / -1 to hit / benefit of cover / rerolls / lethal hits / sustained hits)
 //   2. Wound roll (S vs T table, with optional -1 wound mods / rerolls / anti-X / devastating wounds)
-//   3. Save roll (best of armor save modified by AP and invuln save)
+//   3. Roll the card's saving dice and resolve them from lowest to highest
+//      against each current allocation group's armor / invulnerable save
 //   4. Damage allocation (with -1 damage / half damage; per-point FNP; mortal-FNP for dev wounds)
 //
 // Attacking units fire in list order, with their weapon profiles in user-defined
@@ -12,20 +13,18 @@
 // (a wounded model takes successive damage until destroyed) before moving on.
 // Excess damage from a single attack does NOT spill across models (40k rule).
 //
-// Devastating Wounds: per the 11e core rule, DW attacks (i.e. a critical wound
-// rolled on a [DEVASTATING WOUNDS] weapon) are *only allocated to models after
-// all other attacks made by the attacking unit have been allocated and
-// resolved*. They then inflict mortal wounds equal to the attack's Damage
-// characteristic, and — like Hazardous mortals — do NOT spill over to
-// another model when the model they are allocated to is destroyed (excess is
-// lost). We buffer DW damage rolls during each unit's per-weapon loop and
-// drain them before the next attacking unit resolves.
+// Devastating Wounds bypass saves and resolve after the same weapon card's
+// normal damage, before the next card attacks. Each critical wound inflicts
+// the modified Damage characteristic as mortal wounds. Apply Damage modifiers
+// once before conversion, then the best eligible FNP, and discard excess mortal
+// wounds when that critical wound destroys its one allocated model.
 
-import { DEFAULT_SIMULATIONS, Z_95, REROLL_VALUES, REROLL_SCOPE, randomRerollThreshold } from './constants'
+import { DEFAULT_SIMULATIONS, Z_95, REROLL_SCOPE, randomRerollThreshold } from './constants'
 import { parseDiceExpression, rollDiceExpr, rollDiceExprWithReroll } from './diceExpression'
 import { makeUnitBuffs, mergeWeaponWithUnit } from './unitBuffMerge'
 import { evaluateD6, shouldRerollD6 } from './d6Rerolls'
 import { normalizeAttackBonusValue } from './weaponProfile'
+import { rollD6s } from './roll'
 
 // ---- helpers ---------------------------------------------------------------
 
@@ -88,7 +87,7 @@ const fnpRoll = (fnpThreshold) => {
 
 // Deal `damage` points to the unit's currently-active model, applying
 // per-point FNP. Mutates `unitState.profiles` in place. `mortal` controls
-// whether normal FNP or mortal-wound FNP is used.
+// whether mortal-only FNP is also eligible alongside general FNP.
 // Returns the number of damage points actually consumed from this attack
 // (i.e. delivered before the model died and the rest was wasted, or before
 // the unit was wiped). FNP-blocked points still count as consumed.
@@ -104,7 +103,7 @@ const applyDamageToUnit = (unitState, damage, mortal) => {
     // Apply ONE point to the current model, with FNP. Damage from a single
     // attack only flows to one model (excess wasted), so we cap the loop
     // when this model dies.
-    const fnpUsed = mortal ? (prof.fnpMortal || prof.fnp) : prof.fnp
+    const fnpUsed = mortal ? Math.min(prof.fnp || 7, prof.fnpMortal || 7) : prof.fnp
     while (damage > 0) {
       const blocked = fnpRoll(fnpUsed)
       damage--
@@ -118,9 +117,7 @@ const applyDamageToUnit = (unitState, damage, mortal) => {
           // next attack targets (and is statted against) the next profile.
           if (prof.modelsRemaining <= 0) unitState.activeProfile++
           // Excess damage from a single attack does NOT carry over.
-          // For mortal wounds (dev wounds) the rules also cap excess at the
-          // model boundary in 11e ("until that model is destroyed... excess
-          // is lost"). Stop pushing damage from this attack.
+          // One DW critical can damage at most one model; discard its excess.
           return consumed
         }
       }
@@ -129,7 +126,7 @@ const applyDamageToUnit = (unitState, damage, mortal) => {
   return consumed
 }
 
-// Apply damage modifiers to a single attack's damage value.
+// Modify D before normal damage or conversion into mortal wounds.
 const modifyDamage = (rawDamage, halfDamage, minusOneDamage, damageOne) => {
   if (damageOne) return 1
   let d = rawDamage
@@ -138,19 +135,27 @@ const modifyDamage = (rawDamage, halfDamage, minusOneDamage, damageOne) => {
   return Math.max(1, d)
 }
 
+const saveThresholdAgainstWeapon = (weapon, target) => {
+  const ap = target.minusOneAp ? Math.max(0, (weapon.ap || 0) - 1) : (weapon.ap || 0)
+  const armorSave = clampThreshold((target.save || 7) + ap)
+  const invulnSave = target.invulnSave >= 2 && target.invulnSave <= 6 ? target.invulnSave : 7
+  return Math.min(armorSave, invulnSave)
+}
+
 // ---- single-trial attack resolution ----------------------------------------
 
 const resolveWeaponAgainstUnit = (
   weapon,
   unitState,
   blastBaseModels,
-  deferredDevWounds,
   unitRerollBudgets
 ) => {
   const attacksParsed = parseDiceExpression(weapon.attacks)
   const damageParsed = parseDiceExpression(weapon.damage)
   if (!attacksParsed || !damageParsed) return 0
   let damageDealt = 0
+  let woundCount = 0
+  const deferredDevWounds = []
 
   // Reroll budgets — one per rolling event for this weapon firing. With
   // `scope === 'single'` the budget caps total rerolls at 1 across all of
@@ -262,7 +267,7 @@ const resolveWeaponAgainstUnit = (
       extraHits = parseSustained(weapon.sustainedHits)
     }
 
-    // The original hit + extras each go through wound/save/damage. Lethal
+    // The original hit + extras each go through the wound step. Lethal
     // hits short-circuits ONLY the original critical hit's wound roll.
     const queue = [{ lethalAuto: hitIsCrit && weapon.lethalHits }]
     for (let i = 0; i < extraHits; i++) queue.push({ lethalAuto: false })
@@ -302,38 +307,44 @@ const resolveWeaponAgainstUnit = (
         woundIsCrit = wr.isCrit
       }
 
-      // 2b. Devastating Wounds: critical wound deals damage as mortal wounds,
-      // skipping the save. Per 11e RAW these attacks are deferred until all
-      // other attacks made by the attacking unit have been resolved — we just
-      // roll the damage now and queue it; allocation happens after the weapon
-      // loop in `simulateMultiUnitAttack`.
+      // Keep each critical's Damage roll separate until this card's normal
+      // damage resolves; modify D before converting it into mortal wounds.
       if (woundIsCrit && weapon.devastatingWounds) {
         deferredDevWounds.push(rollDiceExprWithReroll(damageParsed, damageRerollT, damageScope))
         continue
       }
 
-      // 3. Save roll. Pick the better (lower) of modified armor save or invuln.
-      // Benefit of Cover is no longer a save modifier in 11e — it worsens the
-      // attacker's BS in the hit step (see above).
-      // -1 AP (defender buff, e.g. Armour of Contempt): reduce the attacker's
-      // AP by 1, never below 0 (no effect on AP 0 attacks).
-      const ap = t.minusOneAp ? Math.max(0, (weapon.ap || 0) - 1) : (weapon.ap || 0)
-      const baseSave = t.save || 7
-      const armorMod = clampThreshold(baseSave + ap)
-      const invuln = (t.invulnSave && t.invulnSave >= 2 && t.invulnSave <= 6) ? t.invulnSave : 7
-      const effSave = Math.min(armorMod, invuln)
-      if (effSave <= 6) {
-        const sr = rollD6WithReroll(effSave, REROLL_VALUES.NO_REROLL, 7) // crit doesn't apply to saves
-        if (sr.success) continue
-      }
-
-      // 4. Damage
-      const rawDmg = damageRerollT > 0
-        ? rollDiceExprWithReroll(damageParsed, damageRerollT, damageScope)
-        : rollDiceExpr(damageParsed)
-      const dmg = modifyDamage(rawDmg, t.halfDamage, t.minusOneDamage, t.damageOne)
-      damageDealt += applyDamageToUnit(unitState, dmg, false)
+      woundCount++
     }
+  }
+
+  const saveThresholds = unitState.profiles.map((target) => saveThresholdAgainstWeapon(weapon, target))
+  // Even an unsaveable front group needs dice if a later group can save.
+  // Only omit the dice when every remaining group has an impossible save.
+  const canSave = saveThresholds.some(
+    (threshold, index) => unitState.profiles[index].modelsRemaining > 0 && threshold <= 6
+  )
+  const saveRolls = canSave ? rollD6s(woundCount).sort((a, b) => a - b) : null
+
+  for (let index = 0; index < woundCount; index++) {
+    if (unitState.activeProfile >= unitState.profiles.length) break
+    const target = unitState.profiles[unitState.activeProfile]
+    if (saveRolls && saveRolls[index] >= saveThresholds[unitState.activeProfile]) continue
+
+    const rawDmg = damageRerollT > 0
+      ? rollDiceExprWithReroll(damageParsed, damageRerollT, damageScope)
+      : rollDiceExpr(damageParsed)
+    const dmg = modifyDamage(rawDmg, target.halfDamage, target.minusOneDamage, target.damageOne)
+    damageDealt += applyDamageToUnit(unitState, dmg, false)
+  }
+
+  for (const rawDamage of deferredDevWounds) {
+    if (unitState.activeProfile >= unitState.profiles.length) break
+    const target = unitState.profiles[unitState.activeProfile]
+    const mortalWounds = modifyDamage(
+      rawDamage, target.halfDamage, target.minusOneDamage, target.damageOne
+    )
+    damageDealt += applyDamageToUnit(unitState, mortalWounds, true)
   }
   return damageDealt
 }
@@ -392,21 +403,11 @@ export const simulateMultiUnitAttack = (
       const blastBaseModels = state.profiles.reduce(
         (sum, profile) => sum + profile.modelsRemaining, 0
       )
-      const deferredDevWounds = []
       for (const weapon of weapons) {
         if (state.activeProfile >= state.profiles.length) break
         damageThisTrial += resolveWeaponAgainstUnit(
-          weapon, state, blastBaseModels, deferredDevWounds, unitRerollBudgets
+          weapon, state, blastBaseModels, unitRerollBudgets
         )
-      }
-
-      // Drain each unit's deferred wounds before the next unit attacks.
-      // Every attack still loses excess damage at the model boundary.
-      for (const rawDmg of deferredDevWounds) {
-        if (state.activeProfile >= state.profiles.length) break
-        const t = state.profiles[state.activeProfile]
-        const dmg = modifyDamage(rawDmg, t.halfDamage, t.minusOneDamage, t.damageOne)
-        damageThisTrial += applyDamageToUnit(state, dmg, true)
       }
     }
 

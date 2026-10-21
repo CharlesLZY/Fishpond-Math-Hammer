@@ -1,5 +1,16 @@
 # Warhammer 40k 10e — Attack-Dice Rules Reference
 
+> **11e simulator overrides (verified 21 October 2026).** Saving throws now use
+> the 11e sequence in sections 05.03-05.04 (page 19), and Blast/Cleave use the
+> target-selection count in sections 24.05-24.06 (page 79), verified against
+> the [official 11e core rules](https://assets.warhammer-community.com/eng_01-06_warhammer40k_new40k_core_rules-was6fbu1ix-hfewhmxyiy.pdf).
+> Devastating Wounds and FNP use sections 06.02 (page 24), 24.10 (page 80),
+> and 24.12 (page 81), as described in sections 3.5 and 5.3-5.4 below.
+> Saving pools are intentionally per Weapon Profile card, including all
+> `modelsFiring` instances; identical attacks on separate cards are not
+> automatically merged. Other 10e quotations below remain historical reference,
+> not a claim that the entire simulator has been audited against 11e.
+
 > **Audience.** Another AI agent (or new contributor) who needs to implement
 > or audit the attack-resolution logic in this codebase **without** opening
 > the rulebook. All rule quotes are pulled verbatim from the 10e
@@ -35,6 +46,11 @@ For **every individual attack** (one attack = one Attacks-characteristic
 | 5 | **Inflict damage** | — | Target model loses `Damage` wounds (modified). Per-point FNP rolls happen here. Excess does **not** spill to another model. |
 
 Each step is its own D6. If any step fails, the attack ends.
+
+**Current simulator override:** hit/wound rolls complete for the entire weapon
+card before normal damage is allocated. Its saving dice are then rolled and
+resolved from lowest to highest, as described in section 4 below, rather
+than completing all five steps for one attack before starting the next.
 
 ### 1.1 Universal D6 rules (apply to every roll)
 
@@ -183,58 +199,74 @@ hit→wound under torrent.)
 We model this as `plusOneWound` on the weapon (player toggles it on when
 applicable). It's a +1 wound modifier subject to the ±1 cap.
 
-### 3.5 Devastating Wounds  ⚠ deferred
+### 3.5 Devastating Wounds — current 11e simulator
 
-> *"Each time an attack is made with such a weapon, if that attack scores
-> a Critical Wound, no saving throw of any kind can be made against that
-> attack (including invulnerable saving throws). Such attacks are only
-> allocated to models after all other attacks made by the attacking unit
-> have been allocated and resolved. After that attack is allocated and
-> after any modifiers are applied, it inflicts a number of mortal wounds
-> on the target equal to the Damage characteristic of that attack,
-> instead of inflicting damage normally."*
+Under 11e section 24.10, a critical wound ends that attack's sequence and
+inflicts mortal wounds equal to the weapon's D characteristic. Apply these
+rules within the simulator's chosen per-card attack pools:
 
-Three distinct effects, all of which the implementation must respect:
+1. **Bypass all saving throws**, including invulnerable saves. A normal
+   auto-wound from Lethal Hits is not a critical wound and does not trigger DW.
+2. **Resolve the card's normal damage first, then its mortal wounds.**
+   `resolveWeaponAgainstUnit` keeps one local `deferredDevWounds` entry per
+   critical and drains those entries before returning to the next weapon card.
+   Never defer them until the entire attacking unit has finished.
+3. **Modify D before converting it to mortal wounds.** The simulator's
+   HALF DAMAGE, DAMAGE -1 and DAMAGE = 1 flags are D characteristic modifiers,
+   not normal-damage-only effects. They affect the D used for DW conversion,
+   as do weapon Damage increases and random Damage rerolls. D4 with DAMAGE -1
+   becomes three mortal wounds; DAMAGE = 1 produces one. Apply these modifiers
+   once to the Damage value, never repeatedly to individual mortal wounds.
+4. **Use the best eligible FNP once per wound.** General FNP applies to both
+   normal and mortal wounds; mortal-only FNP is an additional eligible choice
+   for mortals, not an unconditional replacement for general FNP.
+5. **Keep packets separate and stop at one model per critical.** Excess
+   mortal wounds from that critical are lost when its allocated model dies,
+   even when another defender profile is available.
 
-1. **Bypass the save** (including invuln). — Skip step 4 entirely.
-2. **Apply as mortal wounds equal to Damage.** — Damage modifiers (Half
-   Damage, Damage −1, Damage = 1) on the target side **still apply**
-   because the rule says "after any modifiers are applied".
-3. **Defer allocation until ALL of the attacking unit's other attacks
-   have resolved.** — In practice: buffer the rolled damage and apply
-   after the per-weapon loop finishes. `simulateAttack` collects DW into
-   `deferredDevWounds[]` then drains the queue once all weapons fire.
-4. **No spill at the model boundary.** — RAW from Mortal Wounds:
-   *"if that model is destroyed as a result of those mortal wounds,
-   the remaining mortal wounds from that attack are lost, just as with a
-   normal attack."* This is a CARVE-OUT to the normal mortal wound
-   spill rule (which DOES spill). `applyDamageToUnit` already returns on
-   model death for both normal and mortal damage, so this is satisfied.
-
-> ⚠ **Why "deferred" matters.** Rule 3 (allocate) interacts with the
-> "must allocate to a wounded model" rule (§5.1). If DW were resolved
-> inline alongside normal attacks of the same weapon, a DW landing
-> early might one-shot a fresh model, leaving the next normal attack
-> to start a new model — wasting less damage. Per RAW, the deferred
-> DW must always land on whatever model is currently wounded, often
-> wasting MW points to overkill. The unit test
-> `Devastating Wounds attacks are deferred until after all other weapons resolve`
-> exercises a configuration where the two semantics differ
-> (~1.81 deferred vs ~2.5 inline, easily distinguishable by Monte Carlo).
+For example, a D2 DW card followed by a D1 normal card targets a W1 model
+followed by a W2 model. If both wound, the DW kills the W1 model and loses its
+excess point, then normal damage removes one wound from the W2 model: one
+model dies. Deferring the DW until after the normal card would incorrectly
+kill both models. Fixed-dice regressions cover both card orders, mixed normal
+and DW results on one card, mitigation, FNP, and model-boundary loss.
 
 ---
 
-## 4. Saving throw
+## 4. Saving throw — current 11e simulator sequence
 
 ```
-modified_armor = clamp( target.Sv + weapon.AP - (cover_applies ? 1 : 0),  2..7 )
+modified_armor = clamp( target.Sv + effective_weapon_AP,  2..7 )
 effective_save = min( modified_armor, target.invuln ?? 7 )
-// Roll a D6; success if D6 >= effective_save (subject to nat-1-fails).
+// Sort the card's natural saving dice ascending, then check each result
+// against the current target profile. Advance profiles only after damage/FNP.
 ```
 
-> **Defender picks** between armor (modified by AP) and invuln. Code
-> always picks the better (lower) — there is no scenario in which it's
-> correct to pick the worse one.
+The defender's profile order represents the allocation order. Roll one saving
+die per normal wound from the current Weapon Profile card, then sort **natural
+results**, not precomputed pass/fail outcomes, from lowest to highest. Each
+result uses the armor/invuln of the current allocation group, including that
+group's AP reduction. After a failure, resolve its damage modifiers and FNP;
+only when the group is exhausted do subsequent results use the next group's
+saves. A successful result does not advance the allocation group.
+
+For three AP 3, Damage 3 wounds against one W2/Sv3+ model followed by one
+W3/Sv3+/InSv4+ model, saving dice `4, 2, 4` become `2, 4, 4`. The 2 kills the
+first model against its effective 6+ save. Both remaining 4s pass the second
+model's invulnerable save, leaving it alive.
+
+All weapon instances on one card share the pool. Separate cards and attacking
+units never share a pool, even if their attacks are identical; automatic
+cross-card identical-attack grouping is deliberately outside the chosen scope.
+Devastating Wounds bypass saving dice and resolve after the same card's normal
+damage, before the next card begins.
+
+**Save selection:** the simulator chooses the better (lower) of armor modified
+by AP and invuln. Natural 1 always fails; natural 6 does not pass a 7+ save.
+Benefit of Cover modifies the hit stage in the 11e simulator, not the save.
+Even when the first group cannot save, it needs saving dice if a later group
+can save. The engine omits those dice only when no remaining profile can save,
+because all results then inflict damage regardless of ordering.
 
 Saving throws use one D6 per attack; the simulator does not provide
 saving-throw re-roll buffs.
@@ -301,22 +333,17 @@ first (which is the only sensible order).
 `applyDamageToUnit` returns the moment a model dies. The next attack
 starts fresh on the next model.
 
-### 5.3 Mortal wound spill — TWO different rules
+### 5.3 Mortal wound spill — current 11e simulator
 
-> *"Each time mortal wounds are inflicted on a unit, … Excess damage from
-> mortal wounds is **not lost** if the damage can be allocated to another
-> model."* — **DEFAULT mortal wound rule (DOES spill).**
->
-> *"If mortal wounds are being inflicted as a result of the [HAZARDOUS]
-> ability or by an attack with the [DEVASTATING WOUNDS] ability that
-> scored a Critical Wound, each time those mortal wounds are allocated
-> to a model, if that model is destroyed as a result of those mortal
-> wounds, the remaining mortal wounds from that attack are lost, just as
-> with a normal attack."* — **DW / HAZARDOUS carve-out (does NOT spill).**
+Generic mortal wounds in section 06.02 are inflicted one point at a time;
+remaining points can move to another model. Devastating Wounds have a
+specific limit in section 24.10: each critical can damage only one model,
+so that critical's remaining points are lost when the model dies.
 
-We only model the carve-out path (the DW one) — this app has no source
-of generic mortal wounds. `applyDamageToUnit` therefore correctly stops
-at the model boundary for both `mortal=true` and `mortal=false`.
+The simulator only models the DW mortal-wound path. `applyDamageToUnit`
+therefore stops at the model boundary for both `mortal=true` and normal damage.
+Do not combine multiple criticals into one packet, or treat all mortal-wound
+sources as if they had the DW exception.
 **If you ever add Smite-style mortal wounds, do NOT reuse this code path
 without splitting the spill behavior.**
 
@@ -330,12 +357,11 @@ without splitting the spill behavior.**
 - One D6 **per damage point**, not per attack.
 - Triggers on every wound lost, including mortals.
 - We model two FNP slots: `fnp` (general) and `fnpMortal` (mortal-only).
-  When applying mortal damage we use `fnpMortal || fnp`. (Some 10e
-  units like Death Guard have FNP that only applies to mortals; others
-  have a unified FNP — both cases work.)
-- The 10e core rule says *"If a model has more than one Feel No Pain
-  ability, you can only use one of them each time"* — we don't combine
-  the two slots, so this is satisfied trivially.
+  For normal damage, only `fnp` is eligible. For mortal wounds, choose the
+  lower enabled threshold from both slots; 0 means disabled. General FNP 2+
+  with mortal-only FNP 6+ must still use 2+ against mortal wounds.
+- Roll once per wound using that chosen threshold, never once for each slot
+  and never a second FNP attempt when the first attempt fails.
 
 ---
 
@@ -366,9 +392,12 @@ values are clamped to 1–5.
 
 The bonus is locked in at **target selection time**, which RAW happens
 before any of the attacking unit's weapons resolve. We snapshot
-`blastBaseModels` at the start of each Monte Carlo trial and reuse it
-for every weapon — so an earlier weapon killing models does NOT shrink
-the second weapon's Blast bonus.
+`blastBaseModels` before each attacking unit's weapon loop in every trial,
+summing all surviving defender profiles. Every weapon in that unit reuses it,
+so an earlier weapon killing models does NOT shrink the next weapon's
+Blast/Cleave bonus. A unit starting against 10 models still grants +2 attacks
+to its later Blast 1/Cleave 1 weapon after earlier weapons leave only one model.
+The next attacking unit snapshots the new surviving count.
 
 ### 6.2 modelsFiring (the "weapon count" multiplier)
 
@@ -472,14 +501,14 @@ When modifying `attackSimulation.js`, verify each of these still holds:
 - [ ] Crit threshold uses unmodified D6, never the modified one.
 - [ ] ±1 modifier cap on hit and wound (compute `mod`, then clamp to `[-1, 1]`).
 - [ ] Save: defender uses better of armor-with-AP vs invuln; cover never on invuln; cover never on Sv ≤ 3 vs AP 0.
-- [ ] Damage floors at 1; `damageOne` overrides Half/Minus.
+- [ ] Modified D floors at 1; `damageOne` overrides Half/Minus for normal damage and DW conversion.
 - [ ] Damage from one attack does not spill across models (return at model death).
-- [ ] DW: deferred until after all weapons fire; mortals do not spill across models; damage modifiers still apply.
+- [ ] DW: card normal damage first, then its mortals, then the next card; modify D once before conversion; each critical damages at most one model.
 - [ ] Blast X / Cleave X: mutually exclusive, X * floor(snapshot_size / 5), X defaults to 1 and is limited to 1–5; one snapshot per shooting unit (i.e. per trial in our model).
 - [ ] Lethal Hits applies only to the original crit, not Sustained extras.
 - [ ] Sustained Hits adds N auto-hits per crit; extras don't trigger Lethal or further Sustained.
 - [ ] Anti-X+: crit wound threshold = X; wound succeeds at X+ if better than S/T.
-- [ ] FNP: one D6 per damage point, not per attack; mortal-FNP slot used for DW.
+- [ ] FNP: one D6 per wound, not per attack; DW uses the best eligible general/mortal-only threshold, without stacking.
 - [ ] Re-rolls: at most once per die; happen before modifiers; honor the four policies.
 - [ ] Each weapon-instance (`modelsFiring`) rolls its `attacks` expression independently.
 
@@ -488,7 +517,7 @@ Then run:
 npm test ; npm run lint ; npm run build
 ```
 All three must pass. If you change anything in §3.5 (Devastating Wounds)
-or §5.3 (mortal wound spill), make sure the three DW unit tests in
+or §5.3 (mortal wound spill), make sure the DW regression tests in
 [attackSimulation.test.js](../src/lib/dice/__tests__/attackSimulation.test.js)
 still pass — they're the regression net for the most-mis-implemented
 rule in the entire engine.

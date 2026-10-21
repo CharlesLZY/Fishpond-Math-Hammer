@@ -186,6 +186,16 @@ in weapon display order; it is not reserved for a later, higher-damage weapon.
 Key rules implemented (see 08-glossary.md for vocabulary):
 - 10e wound-roll table from S vs T (`woundThresholdFromST`).
 - AP modifies armor save; the better of modified armor and invuln is used.
+- **11e saving pools**: gather all normal wounds for one Weapon Profile card,
+  roll its saving dice, and sort the natural results ascending. Check each
+  result against the then-current target profile's armor/invuln, applying its
+  AP reduction, damage modifiers, and FNP before moving to the next result.
+  All `modelsFiring` instances of a card share this pool, but separate cards
+  remain separate pools even when their attacks are identical. This is an
+  intentional per-card scope, not automatic 11e identical-attack grouping.
+  Devastating Wounds bypass saving dice and resolve after the same card's
+  normal damage, before advancing to the next card.
+  Saving dice are omitted only when no remaining target profile can save.
 - Critical roll **always succeeds** (per 10e); modifiers can change the
   pass threshold but never the crit threshold. Crit detection always uses
   the **unmodified** D6 (so e.g. +1 to Hit raises hit chance but not crit chance).
@@ -195,8 +205,14 @@ Key rules implemented (see 08-glossary.md for vocabulary):
 - **+1 to Hit** (`plusOneHit`): -1 to the hit threshold, capped per the modifier rule.
 - **Lethal Hits**: original critical hit auto-wounds (skips wound roll).
 - **Sustained Hits 1 / 2**: each crit hit produces N extra hits.
-- **Devastating Wounds**: each crit wound deals damage as mortal wounds
-  (skips save; FNP-vs-mortal applies if defined, else regular FNP).
+- **Devastating Wounds**: each critical wound inflicts the modified D as a
+  separate mortal-wound packet, after that card's normal damage. Packets
+  bypass saves, not D modifiers: weapon Damage increases, Damage-dice rerolls,
+  HALF DAMAGE, DAMAGE -1 and DAMAGE = 1 determine the packet size.
+  Apply D modifiers once before conversion, never to each mortal-wound point.
+  Each packet can damage at most one model; excess mortal wounds are lost.
+  Use the better eligible `fnp` / `fnpMortal` threshold, rolling only once per
+  wound. A worse mortal-only FNP cannot replace a better general FNP.
 - **ANTI-X+**: critical wound on natural X+; wound threshold is also lowered
   to X if better.
 - **Lance**: -1 to the wound threshold (treated as the bearer charging this turn).
@@ -210,23 +226,24 @@ Key rules implemented (see 08-glossary.md for vocabulary):
   load. Legacy profiles with both enabled use Blast only.
   Missing values in older profiles default to 1; active values outside the
   range are clamped to 1–5. The target count is snapshotted at the **start of each
-  trial** (target-selection time), so the bonus doesn't shrink as earlier
-  weapons in the same trial kill models.
+  attacking unit's weapon loop within every trial** (target-selection time).
+  All its weapons reuse that count, so earlier weapons in that unit cannot
+  shrink the bonus; the next attacking unit snapshots the surviving models.
 - **Critical Hit on x+** (`critHitEnabled` + `critHit`): override the crit
   threshold for hit rolls (default 6). Always evaluated against unmodified D6.
 - **Ignores Cover** (`ignoresCover`): cancels Benefit of Cover for this weapon.
-- **Benefit of Cover** (target side): +1 to armor save, but never to invuln,
-  and never against AP 0 attacks on a Sv 3+ or better target. The 10e
-  "save can never be improved by more than +1" cap is implicit because BoC
-  is the only save modifier modeled.
+- **Benefit of Cover** (target side, 11e): worsens the attack's BS by 1.
+  It is a characteristic modifier, so it stacks with the capped hit-roll
+  modifier; it does not modify saving throws.
 - Damage modifiers: HALF DAMAGE (`Math.ceil(d/2)`), DAMAGE −1 (min 1),
-  DAMAGE = 1 (overrides). The UI keeps these mutually exclusive.
+  DAMAGE = 1 (overrides). These flags modify D for both normal damage and
+  conversion into DW mortal wounds. The UI keeps them mutually exclusive.
 - Per-attack overkill is capped at the model boundary (excess damage from
   one attack does not spill to the next model). The simulator stops when
   the unit is wiped — leftover attacks are discarded (intentional, simpler
   semantics than "track ghost target damage").
 - Multiple target profiles consume models in display order; once a profile
-  is exhausted, the next attack targets the next profile.
+  is exhausted, the next sorted saving result uses the next profile's saves.
 
 ### `constants.js`
 Shared constants used across simulation modules: `DEFAULT_SIMULATIONS`
