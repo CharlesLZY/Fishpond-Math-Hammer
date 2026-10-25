@@ -59,6 +59,8 @@ weapon still gains two attacks. The next attacking unit takes a new snapshot.
 
 ## 40K Tactical Board
 
+Oval base presets include **150x95 mm**, selectable under **bases > Oval**.
+
 The shared **Battleplan** header sits above both tabs and selects the
 Attacker's and Defender's Force Dispositions and their associated colors.
 The same selections apply in both views. **Layout A/B/C** remains in the

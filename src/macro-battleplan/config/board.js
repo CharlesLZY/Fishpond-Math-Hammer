@@ -13,6 +13,7 @@ export const OVAL_BASE_SIZES_MM = [
   { widthMm: 90, heightMm: 52, label: '90×52' },
   { widthMm: 105, heightMm: 70, label: '105×70' },
   { widthMm: 120, heightMm: 92, label: '120×92' },
+  { widthMm: 150, heightMm: 95, label: '150×95' },
   { widthMm: 170, heightMm: 105, label: '170×105' },
 ]
 

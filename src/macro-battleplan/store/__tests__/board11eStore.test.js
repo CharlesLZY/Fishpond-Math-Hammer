@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { OVAL_BASE_SIZES_MM } from '../../config/board'
 import { createMissionPlan, getMissionPlanTotals, hasMissionPlan } from '../../config/missionPlanning11e'
 
 const PLAN_KEY = 'macroBattleplan11e:missionPlan'
@@ -32,6 +33,23 @@ describe('11e mission plan persistence and board compatibility', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  it('adds the 150x95 mm oval preset and preserves its dimensions through export/import', () => {
+    const preset = OVAL_BASE_SIZES_MM.find(
+      (base) => base.widthMm === 150 && base.heightMm === 95,
+    )
+    expect(preset).toEqual({ widthMm: 150, heightMm: 95, label: '150×95' })
+
+    store.getState().addOvalBase(preset.widthMm, preset.heightMm)
+    const dimensions = { shape: 'oval', diameterMm: 150, widthMm: 150, heightMm: 95 }
+    expect(store.getState().pieces).toEqual([expect.objectContaining(dimensions)])
+
+    const exported = JSON.parse(store.getState().exportBoard())
+    expect(exported.bases).toEqual([expect.objectContaining(dimensions)])
+    store.getState().clearBoard()
+    expect(store.getState().importBoard(exported)).toBe(true)
+    expect(store.getState().pieces).toEqual([expect.objectContaining(dimensions)])
   })
 
   it('imports old v1 boards without losing names, recorded scores, bases, or drawings', () => {
